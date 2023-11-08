@@ -2,21 +2,30 @@ package app
 
 import (
 	"fmt"
+	"graduation/internal/config"
 	"graduation/internal/handlers"
+	"graduation/internal/logger"
 	"graduation/internal/router"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type App struct {
+	conf   *config.Flags
 	router *chi.Mux
 }
 
 func newApp() (*App, error) {
+	conf := config.LoadServerConfigure()
+	if err := logger.InitLogger(conf.Logger); err != nil {
+		return nil, fmt.Errorf("cannot init logger: %w", err)
+	}
+
 	router := router.CreateRouter()
 
-	return &App{router: router}, nil
+	return &App{conf: conf, router: router}, nil
 }
 
 func (a *App) createMiddlewareHandlers() {
@@ -36,9 +45,12 @@ func Run() error {
 	if err != nil {
 		return fmt.Errorf("cannot init app: %w", err)
 	}
+	defer logger.Shutdown()
 
 	app.createMiddlewareHandlers()
 	app.createHandlers()
 
-	return http.ListenAndServe(":8080", app.router)
+	address := app.conf.Host + ":" + strconv.Itoa(app.conf.Port)
+
+	return http.ListenAndServe(address, app.router)
 }
