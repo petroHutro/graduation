@@ -21,8 +21,7 @@ type Logger struct {
 }
 
 type Storage struct {
-	DatabaseDSN     string
-	FileStoragePath string
+	DatabaseDSN string
 }
 
 type NetAddress struct {
@@ -41,7 +40,6 @@ type Token struct {
 }
 
 type Flags struct {
-	URLBase
 	NetAddress
 	Logger
 	Storage
@@ -50,7 +48,6 @@ type Flags struct {
 
 func NewFlags() Flags {
 	return Flags{
-		URLBase: URLBase{""},
 		NetAddress: NetAddress{
 			Host: "localhost",
 			Port: 8080,
@@ -61,9 +58,7 @@ func NewFlags() Flags {
 			MultiFlag: false,
 		},
 		Storage: Storage{
-			// FileStoragePath: "/tmp/short-url-db.json",
-			FileStoragePath: "",
-			DatabaseDSN:     "",
+			DatabaseDSN: "host=localhost user=url password=1234 dbname=url sslmode=disable",
 			// DatabaseDSN:     "host=localhost user=url password=1234 dbname=url sslmode=disable",
 		},
 		Token: Token{
@@ -92,14 +87,8 @@ func parseENV(flags *Flags) {
 	if key := os.Getenv("SECRET_KEY"); key != "" {
 		flags.SecretKey = key
 	}
-	if baseURL := os.Getenv("BASE_URL"); baseURL != "" {
-		flags.BaseURL = baseURL
-	}
 	if fileLoggerPath := os.Getenv("LOGGER_FILE"); fileLoggerPath != "" {
 		flags.FilePath = fileLoggerPath
-	}
-	if fileStoragePath := os.Getenv("FILE_STORAGE_PATH"); fileStoragePath != "" {
-		flags.FileStoragePath = fileStoragePath
 	}
 	if databaseDSN := os.Getenv("DATABASE_DSN"); databaseDSN != "" {
 		flags.DatabaseDSN = databaseDSN
@@ -113,9 +102,8 @@ func parseFlags() *Flags {
 	flag.Var(&flags.TokenTime, "t", "user token lifetimer")
 
 	flag.StringVar(&flags.SecretKey, "k", "supersecretkey", "secret key for encoding the token")
-	flag.StringVar(&flags.BaseURL, "b", "http://localhost:8080", "BaseUrl")
-	flag.StringVar(&flags.FileStoragePath, "f", "/tmp/short-url-db.json", "FileStoragePath")
-	flag.StringVar(&flags.DatabaseDSN, "d", "", "DatabaseDSN")
+
+	flag.StringVar(&flags.DatabaseDSN, "d", "host=localhost user=url password=1234 dbname=dbbot sslmode=disable", "DatabaseDSN")
 
 	flag.BoolVar(&flags.Logger.FileFlag, "l", false, "Logger only file")
 	flag.BoolVar(&flags.Logger.MultiFlag, "L", false, "Logger Multi")
