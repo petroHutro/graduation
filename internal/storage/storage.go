@@ -12,8 +12,10 @@ type Storage struct {
 }
 
 type RepError struct {
-	Err        error
-	Repetition bool
+	Err                 error
+	Repetition          bool
+	UniqueViolation     bool
+	ForeignKeyViolation bool
 }
 
 func (e *RepError) Error() string {

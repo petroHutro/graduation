@@ -22,16 +22,14 @@ type RespEvent struct {
 }
 
 func HandlerEventGet(w http.ResponseWriter, r *http.Request, st *storage.Storage) {
-	eventID := r.URL.String()[11:]
-
-	id, err := strconv.Atoi(eventID)
+	eventID, err := strconv.Atoi(r.URL.String()[11:])
 	if err != nil {
 		logger.Error("cannot get id from url: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	event, err := st.GetEvent(r.Context(), id)
+	event, err := st.GetEvent(r.Context(), eventID)
 	if err != nil {
 		logger.Error("cannot get event: %v", err)
 		w.WriteHeader(http.StatusNotFound)

@@ -75,7 +75,6 @@ func (s *Storage) CreateEvent(ctx context.Context, e *Event) error {
 }
 
 func (s *Storage) SetEvent(ctx context.Context, e *Event) error {
-	fmt.Println(e.Participants, e.MaxParticipants)
 	err := s.db.QueryRowContext(ctx, `
 		INSERT INTO event (user_id, title, description, place, participants, max_participants, date, active)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -226,11 +225,29 @@ func (s *Storage) DellEvent(ctx context.Context, userID, eventID int) error {
 		FROM event
 		WHERE id = $1 AND user_id = $2
 	`, eventID, userID).Scan(&id)
-	if err != nil { // проверка на пустоту
+	if err != nil {
+		var flag bool
+
+		err := s.db.QueryRowContext(ctx, `
+			SELECT 1 FROM event
+			WHERE id = $1
+		`, eventID).Scan(&flag)
+		if err != nil {
+			return &RepError{Err: fmt.Errorf("cannot SELECT event: %w", err), ForeignKeyViolation: true}
+		}
+
+		err = s.db.QueryRowContext(ctx, `
+			SELECT 1 FROM event
+			WHERE id = $1 AND user_id = $2
+		`, userID, eventID).Scan(&flag)
+		if err != nil {
+			return &RepError{Err: fmt.Errorf("cannot SELECT record: %w", err), UniqueViolation: true}
+		}
+
 		return fmt.Errorf("event not for user: %w", err)
 	}
 
-	if err := s.DellPhoto(ctx, eventID); err != nil { //проверка что фото нет и все ок
+	if err := s.DellPhoto(ctx, eventID); err != nil {
 		return fmt.Errorf("cannot dell photo: %w", err)
 	}
 
@@ -245,16 +262,40 @@ func (s *Storage) DellEvent(ctx context.Context, userID, eventID int) error {
 }
 
 func (s *Storage) CloseEvent(ctx context.Context, userID, eventID int) error {
-	_, err := s.db.ExecContext(ctx, `
+	rows, err := s.db.ExecContext(ctx, `
 		UPDATE event
-			SET active = CASE
-			WHEN id = $1 AND user_id = $2 THEN false
-			ELSE true
-		END
+			SET active = false
+			WHERE id = $1 AND user_id = $2
 	`, eventID, userID)
-
 	if err != nil {
 		return fmt.Errorf("cannot close event: %w", err)
+	}
+
+	rowsAffected, err := rows.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("cannot get rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		var flag bool
+
+		err := s.db.QueryRowContext(ctx, `
+			SELECT 1 FROM event
+			WHERE id = $1
+		`, eventID).Scan(&flag)
+		if err != nil {
+			return &RepError{Err: fmt.Errorf("cannot SELECT event: %w", err), ForeignKeyViolation: true}
+		}
+
+		err = s.db.QueryRowContext(ctx, `
+			SELECT 1 FROM event
+			WHERE id = $1 AND user_id = $2
+		`, userID, eventID).Scan(&flag)
+		if err != nil {
+			return &RepError{Err: fmt.Errorf("cannot SELECT record: %w", err), UniqueViolation: true}
+		}
+
+		return errors.New("0 close")
 	}
 
 	return nil
@@ -271,7 +312,21 @@ func (s *Storage) AddEventUser(ctx context.Context, eventID, userID int) error {
 		VALUES ($1, $2)
 	`, eventID, userID)
 	if err != nil {
-		return fmt.Errorf("cannot add user: %w", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case pgerrcode.UniqueViolation:
+				if pgErr.ConstraintName == "record_event_id_user_id_key" {
+					return &RepError{Err: err, UniqueViolation: true}
+				}
+			case pgerrcode.ForeignKeyViolation:
+				if pgErr.ConstraintName == "record_event_id_fkey" {
+					return &RepError{Err: err, ForeignKeyViolation: true}
+				}
+			default:
+				return fmt.Errorf("cannot add user: %w", err)
+			}
+		}
 	}
 
 	rows, err := tx.ExecContext(ctx, `
@@ -309,8 +364,30 @@ func (s *Storage) DellEventUser(ctx context.Context, eventID, userID int) error 
 		return fmt.Errorf("cannot dell record: %w", err)
 	}
 	rowsAffected, err := rows.RowsAffected()
-	if err != nil || rowsAffected == 0 {
-		return fmt.Errorf("0 DELETE: %w", err)
+	if err != nil {
+		return fmt.Errorf("cannot get rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		var flag bool
+
+		err := s.db.QueryRowContext(ctx, `
+			SELECT 1 FROM event
+			WHERE id = $1
+		`, eventID).Scan(&flag)
+		if err != nil {
+			return &RepError{Err: fmt.Errorf("cannot SELECT event: %w", err), ForeignKeyViolation: true}
+		}
+
+		err = s.db.QueryRowContext(ctx, `
+			SELECT 1 FROM record
+			WHERE user_id = $1 AND event_id = $2
+		`, userID, eventID).Scan(&flag)
+		if err != nil {
+			return &RepError{Err: fmt.Errorf("cannot SELECT record: %w", err), UniqueViolation: true}
+		}
+
+		return errors.New("0 DELETE")
 	}
 
 	rows, err = tx.ExecContext(ctx, `

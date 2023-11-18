@@ -56,5 +56,4 @@ func HandlerRegister(w http.ResponseWriter, r *http.Request, st *storage.Storage
 	http.SetCookie(w, setAuthorization(secretKey, tokenEXP, userID))
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(data.Login + " " + data.Password))
 }

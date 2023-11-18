@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"graduation/internal/logger"
 	"graduation/internal/storage"
 	"net/http"
@@ -8,7 +9,6 @@ import (
 )
 
 func HandlerUserDell(w http.ResponseWriter, r *http.Request, st *storage.Storage) {
-	// fmt.Println(r.URL.String()[14:])
 	eventID, err := strconv.Atoi(r.URL.String()[15:])
 	if err != nil {
 		logger.Error("cannot get eventID from url: %v", err)
@@ -24,8 +24,19 @@ func HandlerUserDell(w http.ResponseWriter, r *http.Request, st *storage.Storage
 	}
 
 	if err := st.DellEventUser(r.Context(), eventID, userID); err != nil {
-		logger.Error("cannot dell user from event: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
+		var repErr *storage.RepError
+		if errors.As(err, &repErr) {
+			if repErr.UniqueViolation {
+				logger.Error("user not add event: %v", err)
+				w.WriteHeader(http.StatusConflict)
+			} else if repErr.ForeignKeyViolation {
+				logger.Error("event not exist: %v", err)
+				w.WriteHeader(http.StatusNotFound)
+			}
+		} else {
+			logger.Error("cannot dell user from event: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+		}
 		return
 	}
 

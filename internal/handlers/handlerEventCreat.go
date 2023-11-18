@@ -60,7 +60,7 @@ func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st *storage.Stora
 	date, err := time.Parse("2006-01-02 15:04", data.Date)
 	if err != nil {
 		logger.Error("cannot get data.Date: %v", err)
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -74,8 +74,6 @@ func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st *storage.Stora
 		Date:            date,
 		Active:          true,
 	}
-
-	fmt.Println(event)
 
 	for _, photo := range data.Photo {
 		event.Urls = append(event.Urls, photo.Filename)

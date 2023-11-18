@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"graduation/internal/logger"
 	"graduation/internal/storage"
 	"net/http"
@@ -22,9 +23,20 @@ func HandlerEventDell(w http.ResponseWriter, r *http.Request, st *storage.Storag
 		return
 	}
 
-	if err := st.DellEvent(r.Context(), userID, eventID); err != nil { // проверить на 401 и 404
-		logger.Error("cannot get event: %v", err)
-		w.WriteHeader(http.StatusNotFound)
+	if err := st.DellEvent(r.Context(), userID, eventID); err != nil {
+		var repErr *storage.RepError
+		if errors.As(err, &repErr) {
+			if repErr.UniqueViolation {
+				logger.Error("user not have event: %v", err)
+				w.WriteHeader(http.StatusUnauthorized)
+			} else if repErr.ForeignKeyViolation {
+				logger.Error("event not exist: %v", err)
+				w.WriteHeader(http.StatusNotFound)
+			}
+		} else {
+			logger.Error("cannot dell event: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+		}
 		return
 	}
 

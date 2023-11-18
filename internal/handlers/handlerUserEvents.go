@@ -18,7 +18,7 @@ func HandlerUserEvents(w http.ResponseWriter, r *http.Request, st *storage.Stora
 
 	events, err := st.GetUserEvents(r.Context(), userID)
 	if err != nil {
-		logger.Error("cannot get event: %v", err)
+		logger.Error("cannot get events: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
