@@ -52,7 +52,8 @@ func (s *Storage) createTable(ctx context.Context) error {
 				CREATE TABLE photo (
 					id 			SERIAL PRIMARY KEY,
 					event_id	INT REFERENCES event(id) ON DELETE CASCADE,
-					url 		TEXT NOT NULL
+					url 		TEXT NOT NULL,
+					data 		BYTEA NOT NULL
 				);
 
 			END IF;

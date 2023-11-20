@@ -102,7 +102,7 @@ func (a *App) createHandlers() {
 
 	a.router.Route("/api/images", func(r chi.Router) {
 		r.Get("/{filename}", func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandlerImage(w, r)
+			handlers.HandlerImage(w, r, a.storage)
 		})
 	})
 }

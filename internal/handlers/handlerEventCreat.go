@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"graduation/internal/logger"
 	"graduation/internal/storage"
 	"graduation/internal/utils"
@@ -16,7 +15,7 @@ import (
 
 type Photo struct {
 	Filename   string `json:"filename"`
-	Base64Data string `json:"base64_data"`
+	Base64Data []byte `json:"base64_data"`
 }
 
 type DataEventCreat struct {
@@ -46,11 +45,11 @@ func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st *storage.Stora
 		return
 	}
 
-	if err := saveImage(data.Photo); err != nil {
-		logger.Error("cannot save photo: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	// if err := saveImage(data.Photo); err != nil {
+	// 	logger.Error("cannot save photo: %v", err)
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	return
+	// }
 
 	userID, err := strconv.Atoi(r.Header.Get("User_id"))
 	if err != nil {
@@ -78,7 +77,10 @@ func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st *storage.Stora
 	}
 
 	for _, photo := range data.Photo {
-		event.Urls = append(event.Urls, photo.Filename)
+		event.Images = append(event.Images, storage.Image{
+			Filename:   utils.GenerateString() + ".jpg",
+			Base64Data: photo.Base64Data,
+		})
 	}
 
 	if err := st.CreateEvent(r.Context(), &event); err != nil {
@@ -90,20 +92,17 @@ func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st *storage.Stora
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "text/plain")
 
-	// w.Write([]byte(strconv.Itoa(event.ID)))
-
 	w.Write([]byte(encoding.EncodeID(event.ID)))
-
 }
 
-func saveImage(photos []Photo) error {
-	for index, photo := range photos {
-		filename := utils.GenerateString() + ".jpg"
-		photos[index].Filename = filename
-		err := utils.SaveBase64Image(filename, photo.Base64Data)
-		if err != nil {
-			return fmt.Errorf("cannot set database: %w", err)
-		}
-	}
-	return nil
-}
+// func saveImage(photos []Photo) error {
+// 	for index, photo := range photos {
+// 		filename := utils.GenerateString() + ".jpg"
+// 		photos[index].Filename = filename
+// 		err := utils.SaveBase64Image(filename, photo.Base64Data)
+// 		if err != nil {
+// 			return fmt.Errorf("cannot set database: %w", err)
+// 		}
+// 	}
+// 	return nil
+// }

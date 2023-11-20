@@ -83,7 +83,7 @@ func HandlerEventsGet(w http.ResponseWriter, r *http.Request, st *storage.Storag
 	}
 
 	dataEvents := []RespEvent{}
-	for _, event := range events {
+	for index, event := range events {
 		dataEvents = append(dataEvents, RespEvent{
 			ID:              encoding.EncodeID(event.ID),
 			Title:           event.Title,
@@ -93,8 +93,10 @@ func HandlerEventsGet(w http.ResponseWriter, r *http.Request, st *storage.Storag
 			MaxParticipants: event.MaxParticipants,
 			Date:            event.Date,
 			Active:          event.Active,
-			Photo:           event.Urls,
 		})
+		for _, image := range event.Images {
+			dataEvents[index].Photo = append(dataEvents[index].Photo, image.Filename)
+		}
 	}
 
 	dataResp := RespEvents{

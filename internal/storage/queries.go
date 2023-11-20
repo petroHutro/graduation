@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"os"
 	"time"
 
 	"github.com/jackc/pgerrcode"
@@ -46,6 +45,11 @@ func (s *Storage) GetUser(ctx context.Context, login, password string) (int, err
 	return id, nil
 }
 
+type Image struct {
+	Filename   string
+	Base64Data []byte
+}
+
 type Event struct {
 	ID              int
 	User_id         int
@@ -56,7 +60,7 @@ type Event struct {
 	MaxParticipants int
 	Date            time.Time
 	Active          bool
-	Urls            []string
+	Images          []Image
 }
 
 func (s *Storage) CreateEvent(ctx context.Context, e *Event) error {
@@ -65,8 +69,8 @@ func (s *Storage) CreateEvent(ctx context.Context, e *Event) error {
 		return fmt.Errorf("cannot set event: %w", err)
 	}
 
-	for _, url := range e.Urls {
-		err := s.SetEventPhoto(ctx, e.ID, url)
+	for _, image := range e.Images {
+		err := s.SetEventPhoto(ctx, e.ID, image.Filename, image.Base64Data)
 		if err != nil {
 			return fmt.Errorf("cannot set url: %w", err)
 		}
@@ -85,11 +89,11 @@ func (s *Storage) SetEvent(ctx context.Context, e *Event) error {
 	return err
 }
 
-func (s *Storage) SetEventPhoto(ctx context.Context, eventID int, url string) error {
+func (s *Storage) SetEventPhoto(ctx context.Context, eventID int, url string, data []byte) error {
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO photo (event_id, url)
-		VALUES ($1, $2)
-	`, eventID, url)
+		INSERT INTO photo (event_id, url, data)
+		VALUES ($1, $2, $3)
+	`, eventID, url, data)
 
 	return err
 }
@@ -130,7 +134,7 @@ func (s *Storage) GetEvent(ctx context.Context, eventID int) (*Event, error) {
 		if err != nil {
 			return nil, fmt.Errorf("cannot scan: %w", err)
 		}
-		event.Urls = append(event.Urls, url)
+		event.Images = append(event.Images, Image{Filename: url})
 	}
 	return event, nil
 }
@@ -181,7 +185,7 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 			if err != nil {
 				return nil, 0, fmt.Errorf("cannot scan: %w", err)
 			}
-			event.Urls = append(event.Urls, url)
+			event.Images = append(event.Images, Image{Filename: url})
 		}
 		events = append(events, event)
 	}
@@ -202,27 +206,7 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 }
 
 func (s *Storage) DellPhoto(ctx context.Context, eventID int) error {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT url FROM photo WHERE event_id = $1
-		`, eventID)
-	if err != nil {
-		return fmt.Errorf("cannot get url: %w", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var url string
-
-		if err := rows.Scan(&url); err != nil {
-			return fmt.Errorf("cannot scan: %w", err)
-		}
-
-		if err := os.Remove("/Users/petro/GoProjects/graduation/images/" + url); err != nil {
-			return fmt.Errorf("cannot dell file: %w", err)
-		}
-	}
-
-	_, err = s.db.ExecContext(ctx, `
+	_, err := s.db.ExecContext(ctx, `
 		DELETE FROM photo WHERE event_id = $1
 	`, eventID)
 	if err != nil {
@@ -471,9 +455,24 @@ func (s *Storage) GetUserEvents(ctx context.Context, userID int) ([]Event, error
 			if err != nil {
 				return nil, fmt.Errorf("cannot scan: %w", err)
 			}
-			event.Urls = append(event.Urls, url)
+			event.Images = append(event.Images, Image{Filename: url})
 		}
 		events = append(events, event)
 	}
 	return events, nil
+}
+
+func (s *Storage) GetImage(ctx context.Context, filename string) ([]byte, error) {
+	var data []byte
+
+	err := s.db.QueryRowContext(ctx, `
+		SELECT data
+		FROM photo
+		WHERE url = $1
+	`, filename).Scan(&data)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get photo: %w", err)
+	}
+
+	return data, nil
 }

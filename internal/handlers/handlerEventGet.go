@@ -23,7 +23,6 @@ type RespEvent struct {
 }
 
 func HandlerEventGet(w http.ResponseWriter, r *http.Request, st *storage.Storage) {
-	// eventID, err := strconv.Atoi(r.URL.String()[11:])
 	eventID, err := encoding.DecodeID(r.URL.String()[11:])
 	if err != nil {
 		logger.Error("cannot get id from url: %v", err)
@@ -47,7 +46,10 @@ func HandlerEventGet(w http.ResponseWriter, r *http.Request, st *storage.Storage
 		MaxParticipants: event.MaxParticipants,
 		Date:            event.Date,
 		Active:          event.Active,
-		Photo:           event.Urls,
+	}
+
+	for _, image := range event.Images {
+		dataResp.Photo = append(dataResp.Photo, image.Filename)
 	}
 
 	respEvent, err := json.Marshal(dataResp)

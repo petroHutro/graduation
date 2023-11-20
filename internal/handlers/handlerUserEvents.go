@@ -24,7 +24,7 @@ func HandlerUserEvents(w http.ResponseWriter, r *http.Request, st *storage.Stora
 		return
 	}
 	dataResp := []RespEvent{}
-	for _, event := range events {
+	for index, event := range events {
 		dataResp = append(dataResp, RespEvent{
 			ID:              encoding.EncodeID(event.ID),
 			Title:           event.Title,
@@ -34,8 +34,10 @@ func HandlerUserEvents(w http.ResponseWriter, r *http.Request, st *storage.Stora
 			MaxParticipants: event.MaxParticipants,
 			Date:            event.Date,
 			Active:          event.Active,
-			Photo:           event.Urls,
 		})
+		for _, image := range event.Images {
+			dataResp[index].Photo = append(dataResp[index].Photo, image.Filename)
+		}
 	}
 
 	respEvent, err := json.Marshal(dataResp)
