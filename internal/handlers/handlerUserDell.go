@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"graduation/internal/encoding"
 	"graduation/internal/logger"
 	"graduation/internal/storage"
 	"net/http"
@@ -9,7 +10,7 @@ import (
 )
 
 func HandlerUserDell(w http.ResponseWriter, r *http.Request, st *storage.Storage) {
-	eventID, err := strconv.Atoi(r.URL.String()[15:])
+	eventID, err := encoding.DecodeID(r.URL.String()[15:])
 	if err != nil {
 		logger.Error("cannot get eventID from url: %v", err)
 		w.WriteHeader(http.StatusBadRequest)

@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"graduation/internal/encoding"
 )
 
 type Photo struct {
@@ -86,7 +88,12 @@ func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st *storage.Stora
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Event:" + strconv.Itoa(event.ID)))
+	w.Header().Set("Content-Type", "text/plain")
+
+	// w.Write([]byte(strconv.Itoa(event.ID)))
+
+	w.Write([]byte(encoding.EncodeID(event.ID)))
+
 }
 
 func saveImage(photos []Photo) error {

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"graduation/internal/encoding"
 	"graduation/internal/logger"
 	"graduation/internal/storage"
 	"net/http"
@@ -25,7 +26,7 @@ func HandlerUserEvents(w http.ResponseWriter, r *http.Request, st *storage.Stora
 	dataResp := []RespEvent{}
 	for _, event := range events {
 		dataResp = append(dataResp, RespEvent{
-			ID:              event.ID,
+			ID:              encoding.EncodeID(event.ID),
 			Title:           event.Title,
 			Description:     event.Description,
 			Place:           event.Place,

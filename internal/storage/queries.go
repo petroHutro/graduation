@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"time"
 
@@ -134,7 +135,7 @@ func (s *Storage) GetEvent(ctx context.Context, eventID int) (*Event, error) {
 	return event, nil
 }
 
-func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page int) ([]Event, error) {
+func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page int) ([]Event, int, error) {
 	offset := (page - 1) * limit
 	rowsE, err := s.db.QueryContext(ctx, `
 		SELECT id, user_id, title, description, place, participants, max_participants, date, active
@@ -143,7 +144,7 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 		ORDER BY date LIMIT $3 OFFSET $4
 	`, from, to, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get events: %w", err)
+		return nil, 0, fmt.Errorf("cannot get events: %w", err)
 	}
 	defer rowsE.Close()
 
@@ -161,7 +162,7 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 			&event.Date,
 			&event.Active)
 		if err != nil {
-			return nil, fmt.Errorf("cannot scan: %w", err)
+			return nil, 0, fmt.Errorf("cannot scan: %w", err)
 		}
 
 		rowsP, err := s.db.QueryContext(ctx, `
@@ -170,7 +171,7 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 			WHERE event_id = $1
 		`, event.ID)
 		if err != nil {
-			return nil, fmt.Errorf("cannot get urls: %w", err)
+			return nil, 0, fmt.Errorf("cannot get urls: %w", err)
 		}
 		defer rowsP.Close()
 
@@ -178,13 +179,26 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 			var url string
 			err := rowsP.Scan(&url)
 			if err != nil {
-				return nil, fmt.Errorf("cannot scan: %w", err)
+				return nil, 0, fmt.Errorf("cannot scan: %w", err)
 			}
 			event.Urls = append(event.Urls, url)
 		}
 		events = append(events, event)
 	}
-	return events, nil
+
+	var count int
+	err = s.db.QueryRowContext(ctx, `
+		SELECT COUNT(DISTINCT id)
+		FROM event
+		WHERE date BETWEEN $1 AND $2;
+	`, from, to).Scan(&count)
+	if err != nil {
+		return nil, 0, fmt.Errorf("cannot get count event: %w", err)
+	}
+
+	count = int(math.Ceil(float64(count) / float64(limit)))
+
+	return events, count, nil
 }
 
 func (s *Storage) DellPhoto(ctx context.Context, eventID int) error {

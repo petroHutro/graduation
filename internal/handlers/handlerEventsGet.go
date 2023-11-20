@@ -2,22 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"graduation/internal/encoding"
 	"graduation/internal/logger"
 	"graduation/internal/storage"
 	"net/http"
 	"time"
 )
-
-// type RespEvent struct {
-// 	ID           int       `json:"id"`
-// 	Title        string    `json:"title"`
-// 	Description  string    `json:"description"`
-// 	Place        string    `json:"place"`
-// 	Participants int       `json:"participants"`
-// 	Date         time.Time `json:"data"`
-// 	Active       bool      `json:"active"`
-// 	Photo        []string  `json:"photo"`
-// }
 
 type OptionalFrom time.Time
 
@@ -60,6 +50,12 @@ type DataEventsGet struct {
 	Page  int          `json:"page"`
 }
 
+type RespEvents struct {
+	Page   int         `json:"page"`
+	Pages  int         `json:"pages"`
+	Events []RespEvent `json:"events"`
+}
+
 func intDataEventsGet() *DataEventsGet {
 	data := DataEventsGet{
 		From:  OptionalFrom(time.Now().Truncate(24 * time.Hour)),
@@ -79,17 +75,17 @@ func HandlerEventsGet(w http.ResponseWriter, r *http.Request, st *storage.Storag
 		return
 	}
 
-	events, err := st.GetEvents(r.Context(), time.Time(data.From), time.Time(data.To), data.Limit, data.Page)
+	events, pages, err := st.GetEvents(r.Context(), time.Time(data.From), time.Time(data.To), data.Limit, data.Page)
 	if err != nil {
 		logger.Error("cannot get events: %v", err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	dataResp := []RespEvent{}
+	dataEvents := []RespEvent{}
 	for _, event := range events {
-		dataResp = append(dataResp, RespEvent{
-			ID:              event.ID,
+		dataEvents = append(dataEvents, RespEvent{
+			ID:              encoding.EncodeID(event.ID),
 			Title:           event.Title,
 			Description:     event.Description,
 			Place:           event.Place,
@@ -99,6 +95,12 @@ func HandlerEventsGet(w http.ResponseWriter, r *http.Request, st *storage.Storag
 			Active:          event.Active,
 			Photo:           event.Urls,
 		})
+	}
+
+	dataResp := RespEvents{
+		Page:   data.Page,
+		Pages:  pages,
+		Events: dataEvents,
 	}
 
 	respEvent, err := json.Marshal(dataResp)

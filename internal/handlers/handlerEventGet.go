@@ -5,12 +5,13 @@ import (
 	"graduation/internal/logger"
 	"graduation/internal/storage"
 	"net/http"
-	"strconv"
 	"time"
+
+	"graduation/internal/encoding"
 )
 
 type RespEvent struct {
-	ID              int       `json:"id"`
+	ID              string    `json:"id"`
 	Title           string    `json:"title"`
 	Description     string    `json:"description"`
 	Place           string    `json:"place"`
@@ -22,7 +23,8 @@ type RespEvent struct {
 }
 
 func HandlerEventGet(w http.ResponseWriter, r *http.Request, st *storage.Storage) {
-	eventID, err := strconv.Atoi(r.URL.String()[11:])
+	// eventID, err := strconv.Atoi(r.URL.String()[11:])
+	eventID, err := encoding.DecodeID(r.URL.String()[11:])
 	if err != nil {
 		logger.Error("cannot get id from url: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -37,7 +39,7 @@ func HandlerEventGet(w http.ResponseWriter, r *http.Request, st *storage.Storage
 	}
 
 	dataResp := RespEvent{
-		ID:              event.ID,
+		ID:              encoding.EncodeID(event.ID),
 		Title:           event.Title,
 		Description:     event.Description,
 		Place:           event.Place,
