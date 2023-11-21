@@ -169,7 +169,7 @@ func (s *Storage) GetUserEvents(ctx context.Context, userID int) ([]Event, error
 		var event Event
 		err := rowsE.Scan(
 			&event.ID,
-			&event.User_id,
+			&event.UserID,
 			&event.Title,
 			&event.Description,
 			&event.Place,

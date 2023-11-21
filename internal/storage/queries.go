@@ -14,7 +14,7 @@ type Image struct {
 
 type Event struct {
 	ID              int
-	User_id         int
+	UserID          int
 	Title           string
 	Description     string
 	Place           string

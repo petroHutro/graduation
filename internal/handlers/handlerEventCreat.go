@@ -60,7 +60,7 @@ func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st *storage.Stora
 	}
 
 	event := storage.Event{
-		User_id:         userID,
+		UserID:          userID,
 		Title:           data.Title,
 		Description:     data.Description,
 		Place:           data.Place,

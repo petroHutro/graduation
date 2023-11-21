@@ -29,7 +29,7 @@ func (s *Storage) SetEvent(ctx context.Context, e *Event) error {
 		INSERT INTO event (user_id, title, description, place, participants, max_participants, date, active)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id
-	`, e.User_id, e.Title, e.Description, e.Place, e.Participants, e.MaxParticipants, e.Date, e.Active).Scan(&e.ID)
+	`, e.UserID, e.Title, e.Description, e.Place, e.Participants, e.MaxParticipants, e.Date, e.Active).Scan(&e.ID)
 
 	return err
 }
@@ -51,7 +51,7 @@ func (s *Storage) GetEvent(ctx context.Context, eventID int) (*Event, error) {
 		WHERE id = $1
 	`, eventID).Scan(
 		&event.ID,
-		&event.User_id,
+		&event.UserID,
 		&event.Title,
 		&event.Description,
 		&event.Place,
@@ -102,7 +102,7 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 		var event Event
 		err := rowsE.Scan(
 			&event.ID,
-			&event.User_id,
+			&event.UserID,
 			&event.Title,
 			&event.Description,
 			&event.Place,
