@@ -45,12 +45,6 @@ func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st *storage.Stora
 		return
 	}
 
-	// if err := saveImage(data.Photo); err != nil {
-	// 	logger.Error("cannot save photo: %v", err)
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	return
-	// }
-
 	userID, err := strconv.Atoi(r.Header.Get("User_id"))
 	if err != nil {
 		logger.Error("cannot get user id: %v", err)
@@ -94,15 +88,3 @@ func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st *storage.Stora
 
 	w.Write([]byte(encoding.EncodeID(event.ID)))
 }
-
-// func saveImage(photos []Photo) error {
-// 	for index, photo := range photos {
-// 		filename := utils.GenerateString() + ".jpg"
-// 		photos[index].Filename = filename
-// 		err := utils.SaveBase64Image(filename, photo.Base64Data)
-// 		if err != nil {
-// 			return fmt.Errorf("cannot set database: %w", err)
-// 		}
-// 	}
-// 	return nil
-// }

@@ -31,6 +31,26 @@ type EventUsers struct {
 	UserID []int
 }
 
+func (s *Storage) inTransaction(ctx context.Context, f func(ctx context.Context, tx *sql.Tx) error) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("cannot begin: %w", err)
+	}
+
+	if err := f(ctx, tx); err != nil {
+		return fmt.Errorf("transaction: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		if err := tx.Rollback(); err != nil {
+			return fmt.Errorf("transaction Rollback failed: %w", err)
+		}
+		return fmt.Errorf("transaction commit failed: %w", err)
+	}
+
+	return nil
+}
+
 func (s *Storage) GetImage(ctx context.Context, filename string) ([]byte, error) {
 	var data []byte
 
@@ -99,7 +119,7 @@ func (s *Storage) GetEventsToday(ctx context.Context, date time.Time) ([]EventUs
 func (s *Storage) EventsToday(ctx context.Context, date time.Time) error {
 	events, err := s.GetEventsToday(ctx, date)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot get events today: %w", err)
 	}
 
 	for _, event := range events {
@@ -110,7 +130,7 @@ func (s *Storage) EventsToday(ctx context.Context, date time.Time) error {
 				ON CONFLICT (event_id, user_id) DO NOTHING;
 			`, event.ID, user, event.Date)
 			if err != nil {
-				return err
+				return fmt.Errorf("cannot set: %w", err)
 			}
 		}
 	}
@@ -150,33 +170,31 @@ func send(eventID, userID int) error {
 }
 
 func (s *Storage) SendMessage(ctx context.Context, date time.Time) error {
-	tx, err := s.db.Begin()
-	if err != nil {
-		return fmt.Errorf("cannot begin: %w", err)
-	}
-
-	userEvent, err := s.GetUserToday(ctx, date)
-	if err != nil {
-		return fmt.Errorf("cannot get user today: %w", err)
-	}
-
-	for eventID, userID := range userEvent {
-		err := send(eventID, userID)
+	err := s.inTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		userEvent, err := s.GetUserToday(ctx, date)
 		if err != nil {
-			return fmt.Errorf("cannot send message: %w", err)
+			return fmt.Errorf("cannot get user today: %w", err)
 		}
 
-		_, err = s.db.ExecContext(ctx, `
-			DELETE FROM today WHERE event_id = $1 AND user_id = $2
-		`, eventID, userID)
-		if err != nil {
-			return fmt.Errorf("cannot dell today: %w", err)
-		}
-	}
+		for eventID, userID := range userEvent {
+			err := send(eventID, userID)
+			if err != nil {
+				return fmt.Errorf("cannot send message: %w", err)
+			}
 
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		return fmt.Errorf("transaction commit failed: %w", err)
+			_, err = s.db.ExecContext(ctx, `
+				DELETE FROM today WHERE event_id = $1 AND user_id = $2
+			`, eventID, userID)
+			if err != nil {
+				return fmt.Errorf("cannot dell today: %w", err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("cannot send message: %w", err)
 	}
 
 	return nil

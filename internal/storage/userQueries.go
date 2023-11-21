@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -44,111 +45,107 @@ func (s *Storage) GetUser(ctx context.Context, login, password string) (int, err
 }
 
 func (s *Storage) AddEventUser(ctx context.Context, eventID, userID int) error {
-	tx, err := s.db.Begin()
-	if err != nil {
-		return fmt.Errorf("cannot begin: %w", err)
-	}
-
-	_, err = tx.ExecContext(ctx, `
-		INSERT INTO record (event_id, user_id)
-		VALUES ($1, $2)
-	`, eventID, userID)
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			switch pgErr.Code {
-			case pgerrcode.UniqueViolation:
-				if pgErr.ConstraintName == "record_event_id_user_id_key" {
-					return &RepError{Err: err, UniqueViolation: true}
+	err := s.inTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO record (event_id, user_id)
+			VALUES ($1, $2)
+		`, eventID, userID)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				switch pgErr.Code {
+				case pgerrcode.UniqueViolation:
+					if pgErr.ConstraintName == "record_event_id_user_id_key" {
+						return &RepError{Err: err, UniqueViolation: true}
+					}
+				case pgerrcode.ForeignKeyViolation:
+					if pgErr.ConstraintName == "record_event_id_fkey" {
+						return &RepError{Err: err, ForeignKeyViolation: true}
+					}
+				default:
+					return fmt.Errorf("cannot add user: %w", err)
 				}
-			case pgerrcode.ForeignKeyViolation:
-				if pgErr.ConstraintName == "record_event_id_fkey" {
-					return &RepError{Err: err, ForeignKeyViolation: true}
-				}
-			default:
-				return fmt.Errorf("cannot add user: %w", err)
 			}
 		}
-	}
 
-	rows, err := tx.ExecContext(ctx, `
-		UPDATE event
-			SET participants = participants + 1
-			WHERE id = $1 AND participants < max_participants AND active = true
-	`, eventID)
+		rows, err := tx.ExecContext(ctx, `
+			UPDATE event
+				SET participants = participants + 1
+				WHERE id = $1 AND participants < max_participants AND active = true
+		`, eventID)
+		if err != nil {
+			return fmt.Errorf("cannot UPDATE event: %w", err)
+		}
+
+		rowsAffected, err := rows.RowsAffected()
+		if err != nil || rowsAffected == 0 {
+			return fmt.Errorf("0 UPDATE: %w", &RepError{Err: err, UniqueViolation: true})
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return fmt.Errorf("cannot UPDATE event: %w", err)
-	}
-
-	rowsAffected, err := rows.RowsAffected()
-	if err != nil || rowsAffected == 0 {
-		return fmt.Errorf("0 UPDATE: %w", &RepError{Err: err, UniqueViolation: true})
-	}
-
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		return fmt.Errorf("transaction commit failed: %w", err)
+		return fmt.Errorf("cannot add evnt user: %w", err)
 	}
 
 	return nil
 }
 
 func (s *Storage) DellEventUser(ctx context.Context, eventID, userID int) error {
-	tx, err := s.db.Begin()
-	if err != nil {
-		return fmt.Errorf("cannot begin: %w", err)
-	}
-
-	rows, err := tx.ExecContext(ctx, `
-		DELETE FROM record WHERE user_id = $1 AND event_id = $2
-	`, userID, eventID)
-	if err != nil {
-		return fmt.Errorf("cannot dell record: %w", err)
-	}
-	rowsAffected, err := rows.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("cannot get rows: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		var flag bool
-
-		err := s.db.QueryRowContext(ctx, `
-			SELECT 1 FROM event
-			WHERE id = $1
-		`, eventID).Scan(&flag)
+	err := s.inTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		rows, err := tx.ExecContext(ctx, `
+			DELETE FROM record WHERE user_id = $1 AND event_id = $2
+		`, userID, eventID)
 		if err != nil {
-			return &RepError{Err: fmt.Errorf("cannot SELECT event: %w", err), ForeignKeyViolation: true}
+			return fmt.Errorf("cannot dell record: %w", err)
+		}
+		rowsAffected, err := rows.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("cannot get rows: %w", err)
 		}
 
-		err = s.db.QueryRowContext(ctx, `
-			SELECT 1 FROM record
-			WHERE user_id = $1 AND event_id = $2
-		`, userID, eventID).Scan(&flag)
-		if err != nil {
-			return &RepError{Err: fmt.Errorf("cannot SELECT record: %w", err), UniqueViolation: true}
+		if rowsAffected == 0 {
+			var flag bool
+
+			err := s.db.QueryRowContext(ctx, `
+				SELECT 1 FROM event
+				WHERE id = $1
+			`, eventID).Scan(&flag)
+			if err != nil {
+				return &RepError{Err: fmt.Errorf("cannot SELECT event: %w", err), ForeignKeyViolation: true}
+			}
+
+			err = s.db.QueryRowContext(ctx, `
+				SELECT 1 FROM record
+				WHERE user_id = $1 AND event_id = $2
+			`, userID, eventID).Scan(&flag)
+			if err != nil {
+				return &RepError{Err: fmt.Errorf("cannot SELECT record: %w", err), UniqueViolation: true}
+			}
+
+			return errors.New("0 DELETE")
 		}
 
-		return errors.New("0 DELETE")
-	}
+		rows, err = tx.ExecContext(ctx, `
+			UPDATE event
+				SET participants = participants - 1
+				WHERE id = $1
+		`, eventID)
+		if err != nil {
+			return fmt.Errorf("cannot UPDATE event: %w", err)
+		}
 
-	rows, err = tx.ExecContext(ctx, `
-		UPDATE event
-			SET participants = participants - 1
-			WHERE id = $1
-	`, eventID)
+		rowsAffected, err = rows.RowsAffected()
+		if err != nil || rowsAffected == 0 {
+			return fmt.Errorf("0 UPDATE: %w", err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return fmt.Errorf("cannot UPDATE event: %w", err)
-	}
-
-	rowsAffected, err = rows.RowsAffected()
-	if err != nil || rowsAffected == 0 {
-		return fmt.Errorf("0 UPDATE: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		return fmt.Errorf("transaction commit failed: %w", err)
+		return fmt.Errorf("cannot send message: %w", err)
 	}
 
 	return nil
@@ -204,5 +201,6 @@ func (s *Storage) GetUserEvents(ctx context.Context, userID int) ([]Event, error
 		}
 		events = append(events, event)
 	}
+
 	return events, nil
 }

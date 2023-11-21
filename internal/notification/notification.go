@@ -32,7 +32,7 @@ func LoopNotification(st *storage.Storage) {
 			fmt.Println("tickerSend.C:")
 			err := st.SendMessage(context.Background(), date.Add(3*time.Hour))
 			if err != nil {
-				logger.Error("cannot get evens:%v", err)
+				logger.Error("cannot send message:%v", err)
 			}
 		}
 	}
