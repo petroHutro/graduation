@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"math"
@@ -144,7 +145,7 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 	rowsE, err := s.db.QueryContext(ctx, `
 		SELECT id, user_id, title, description, place, participants, max_participants, date, active
 		FROM event
-		WHERE date BETWEEN $1 AND $2
+		WHERE date BETWEEN $1 AND $2 AND active = true
 		ORDER BY date LIMIT $3 OFFSET $4
 	`, from, to, limit, offset)
 	if err != nil {
@@ -330,7 +331,7 @@ func (s *Storage) AddEventUser(ctx context.Context, eventID, userID int) error {
 	rows, err := tx.ExecContext(ctx, `
 		UPDATE event
 			SET participants = participants + 1
-			WHERE id = $1 AND participants < max_participants
+			WHERE id = $1 AND participants < max_participants AND active = true
 	`, eventID)
 	if err != nil {
 		return fmt.Errorf("cannot UPDATE event: %w", err)
@@ -338,7 +339,7 @@ func (s *Storage) AddEventUser(ctx context.Context, eventID, userID int) error {
 
 	rowsAffected, err := rows.RowsAffected()
 	if err != nil || rowsAffected == 0 {
-		return fmt.Errorf("0 UPDATE: %w", err)
+		return fmt.Errorf("0 UPDATE: %w", &RepError{Err: err, UniqueViolation: true})
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -415,7 +416,8 @@ func (s *Storage) GetUserEvents(ctx context.Context, userID int) ([]Event, error
 		SELECT event.id, event.user_id, event.title, event.description, event.place, event.participants, event.max_participants, event.date, event.active
 		FROM event
 		JOIN record ON event.id = record.event_id
-		WHERE record.user_id = $1;
+		WHERE record.user_id = $1
+		ORDER BY event.date
 	`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get events: %w", err)
@@ -471,6 +473,9 @@ func (s *Storage) GetImage(ctx context.Context, filename string) ([]byte, error)
 		WHERE url = $1
 	`, filename).Scan(&data)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("photo not found: %w", &RepError{Err: err, UniqueViolation: true})
+		}
 		return nil, fmt.Errorf("cannot get photo: %w", err)
 	}
 

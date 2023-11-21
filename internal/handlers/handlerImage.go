@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"errors"
 	"graduation/internal/logger"
 	"graduation/internal/storage"
 	"net/http"
@@ -12,8 +13,14 @@ func HandlerImage(w http.ResponseWriter, r *http.Request, st *storage.Storage) {
 	filename := r.URL.String()[12:]
 	imageBytes, err := st.GetImage(r.Context(), filename)
 	if err != nil {
-		logger.Error("cannot get Image: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
+		var repErr *storage.RepError
+		if errors.As(err, &repErr) && repErr.UniqueViolation {
+			logger.Error("photo not found: %v", err)
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			logger.Error("cannot get Image: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+		}
 		return
 	}
 
