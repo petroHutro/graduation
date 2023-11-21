@@ -68,7 +68,7 @@ func (s *Storage) GetEvent(ctx context.Context, eventID int) (*Event, error) {
 		FROM photo
 		WHERE event_id = $1
 	`, eventID)
-	if err != nil {
+	if err != nil || rows.Err() != nil {
 		return nil, fmt.Errorf("cannot get urls: %w", err)
 	}
 	defer rows.Close()
@@ -92,7 +92,7 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 		WHERE date BETWEEN $1 AND $2 AND active = true
 		ORDER BY date LIMIT $3 OFFSET $4
 	`, from, to, limit, offset)
-	if err != nil {
+	if err != nil || rowsE.Err() != nil {
 		return nil, 0, fmt.Errorf("cannot get events: %w", err)
 	}
 	defer rowsE.Close()
@@ -119,7 +119,7 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 			FROM photo
 			WHERE event_id = $1
 		`, event.ID)
-		if err != nil {
+		if err != nil || rowsP.Err() != nil {
 			return nil, 0, fmt.Errorf("cannot get urls: %w", err)
 		}
 		defer rowsP.Close()

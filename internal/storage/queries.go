@@ -77,7 +77,7 @@ func (s *Storage) GetEventsToday(ctx context.Context, date time.Time) ([]EventUs
 		AND active = true
 		ORDER BY date
 	`, date.Year(), date.Month(), date.Day())
-	if err != nil {
+	if err != nil || rowsEvent.Err() != nil {
 		return nil, fmt.Errorf("cannot get events: %w", err)
 	}
 	defer rowsEvent.Close()
@@ -96,7 +96,7 @@ func (s *Storage) GetEventsToday(ctx context.Context, date time.Time) ([]EventUs
 			FROM record
 			WHERE event_id = $1
 		`, eventID)
-		if err != nil {
+		if err != nil || rowsUser.Err() != nil {
 			return nil, fmt.Errorf("cannot get record: %w", err)
 		}
 		defer rowsUser.Close()
@@ -146,7 +146,7 @@ func (s *Storage) GetUserToday(ctx context.Context, date time.Time) (map[int]int
 		FROM today
 		WHERE EXTRACT(DAY FROM date) <= $1 AND EXTRACT(HOUR FROM date) <= $2
 	`, day, hour)
-	if err != nil {
+	if err != nil || rowsEvent.Err() != nil {
 		return nil, fmt.Errorf("cannot get user_id: %w", err)
 	}
 	defer rowsEvent.Close()
