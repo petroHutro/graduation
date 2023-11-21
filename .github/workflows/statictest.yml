@@ -20,7 +20,8 @@ jobs:
       - name: Download statictest binary
         uses: robinraju/release-downloader@v1.8
         with:
-          repository: Yandex-Practicum/go-autotests-bin
+          repository: Yandex-Practicum/go-autotests
+          latest: true
           tag: "v0.9.16"
           fileName: statictest
           out-file-path: .tools
