@@ -6,6 +6,7 @@ import (
 	"graduation/internal/config"
 	"graduation/internal/handlers"
 	"graduation/internal/logger"
+	"graduation/internal/notification"
 	"graduation/internal/router"
 	"graduation/internal/storage"
 
@@ -116,6 +117,8 @@ func Run() error {
 
 	app.createMiddlewareHandlers()
 	app.createHandlers()
+
+	go notification.LoopNotification(app.storage)
 
 	address := app.conf.Host + ":" + strconv.Itoa(app.conf.Port)
 

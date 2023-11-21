@@ -49,6 +49,14 @@ func (s *Storage) createTable(ctx context.Context) error {
 					UNIQUE 		(event_id, user_id)
 				);
 
+				CREATE TABLE today (
+					id 			SERIAL PRIMARY KEY,
+					event_id	INT REFERENCES event(id) ON DELETE CASCADE,
+					user_id		INT REFERENCES users(id) ON DELETE CASCADE,
+					date 		timestamp,
+					UNIQUE 		(event_id, user_id)
+				);
+
 				CREATE TABLE photo (
 					id 			SERIAL PRIMARY KEY,
 					event_id	INT REFERENCES event(id) ON DELETE CASCADE,
