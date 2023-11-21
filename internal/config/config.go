@@ -99,6 +99,7 @@ func parseFlags() *Flags {
 	flags := NewFlags()
 
 	flag.Var(&flags.NetAddress, "a", "address and port to run server")
+
 	flag.Var(&flags.TokenTime, "t", "user token lifetimer")
 
 	flag.StringVar(&flags.SecretKey, "k", "supersecretkey", "secret key for encoding the token")

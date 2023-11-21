@@ -5,25 +5,6 @@ import (
 	"fmt"
 )
 
-// func EncodeID(id int) string {
-// 	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("id:%d", id)))
-// }
-
-// func DecodeID(encodedID string) (int, error) {
-// 	decodedBytes, err := base64.StdEncoding.DecodeString(encodedID)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-
-// 	var id int
-// 	_, err = fmt.Sscanf(string(decodedBytes), "id:%d", &id)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-
-// 	return id, nil
-// }
-
 var secretKey = "mySecretKey"
 
 func EncodeID(id int) string {
