@@ -5,18 +5,19 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"graduation/internal/entity"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-func (s *Storage) SetUser(ctx context.Context, login, password string) (int, error) {
+func (s *Storage) SetUser(ctx context.Context, login, password, mail string) (int, error) {
 	var id int
 	err := s.db.QueryRowContext(ctx, `
-		INSERT INTO users (login, password)
-		VALUES ($1, $2)
+		INSERT INTO users (login, password, mail)
+		VALUES ($1, $2, $3)
 		RETURNING id
-	`, login, password).Scan(&id)
+	`, login, password, mail).Scan(&id)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -151,7 +152,7 @@ func (s *Storage) DellEventUser(ctx context.Context, eventID, userID int) error 
 	return nil
 }
 
-func (s *Storage) GetUserEvents(ctx context.Context, userID int) ([]Event, error) {
+func (s *Storage) GetUserEvents(ctx context.Context, userID int) ([]entity.Event, error) {
 	rowsE, err := s.db.QueryContext(ctx, `
 		SELECT event.id, event.user_id, event.title, event.description, event.place, event.participants, event.max_participants, event.date, event.active
 		FROM event
@@ -164,9 +165,9 @@ func (s *Storage) GetUserEvents(ctx context.Context, userID int) ([]Event, error
 	}
 	defer rowsE.Close()
 
-	var events []Event
+	var events []entity.Event
 	for rowsE.Next() {
-		var event Event
+		var event entity.Event
 		err := rowsE.Scan(
 			&event.ID,
 			&event.UserID,
@@ -181,24 +182,14 @@ func (s *Storage) GetUserEvents(ctx context.Context, userID int) ([]Event, error
 			return nil, fmt.Errorf("cannot scan: %w", err)
 		}
 
-		rowsP, err := s.db.QueryContext(ctx, `
-			SELECT url
-			FROM photo
-			WHERE event_id = $1
-		`, event.ID)
+		urls, err := s.GetImages(ctx, event.ID)
 		if err != nil {
-			return nil, fmt.Errorf("cannot get urls: %w", err)
+			return nil, fmt.Errorf("cannot get images: %w", err)
 		}
-		defer rowsP.Close()
+		for _, url := range urls {
+			event.Images = append(event.Images, entity.Image{Filename: url})
+		}
 
-		for rowsP.Next() {
-			var url string
-			err := rowsP.Scan(&url)
-			if err != nil {
-				return nil, fmt.Errorf("cannot scan: %w", err)
-			}
-			event.Images = append(event.Images, Image{Filename: url})
-		}
 		events = append(events, event)
 	}
 

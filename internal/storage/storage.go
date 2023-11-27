@@ -4,11 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"graduation/internal/objectstorage"
+
 	"time"
 )
 
 type Storage struct {
-	db *sql.DB
+	db  *sql.DB
+	ost *objectstorage.Storage
 }
 
 type RepError struct {
@@ -34,5 +37,10 @@ func newStorage(databaseDSN string) (*Storage, error) {
 		return nil, fmt.Errorf("cannot ping database: %w", err)
 	}
 
-	return &Storage{db: db}, nil
+	ost, err := objectstorage.Connect()
+	if err != nil {
+		return nil, fmt.Errorf("cannot connection object storage: %w", err)
+	}
+
+	return &Storage{db: db, ost: ost}, nil
 }

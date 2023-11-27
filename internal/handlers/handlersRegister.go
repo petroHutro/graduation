@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"graduation/internal/authorization"
 	"graduation/internal/logger"
 	"graduation/internal/storage"
@@ -15,12 +16,16 @@ import (
 type DataRegister struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
+	Mail     string `json:"mail"`
 }
 
-func setAuthorization(secretKey string, tokenEXP time.Duration, id int) *http.Cookie {
-	token, _ := authorization.BuildJWTString(secretKey, tokenEXP, id)
+func setAuthorization(secretKey string, tokenEXP time.Duration, id int) (*http.Cookie, error) {
+	token, err := authorization.BuildJWTString(secretKey, tokenEXP, id)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get token: %v", err)
+	}
 	cookie := http.Cookie{Name: "Authorization", Value: token, Path: "/api"}
-	return &cookie
+	return &cookie, nil
 }
 
 func HandlerRegister(w http.ResponseWriter, r *http.Request, st *storage.Storage, secretKey string, tokenEXP time.Duration) {
@@ -40,7 +45,7 @@ func HandlerRegister(w http.ResponseWriter, r *http.Request, st *storage.Storage
 		return
 	}
 
-	userID, err := st.SetUser(r.Context(), data.Login, data.Password)
+	userID, err := st.SetUser(r.Context(), data.Login, data.Password, data.Mail)
 	if err != nil {
 		var repErr *storage.RepError
 		if errors.As(err, &repErr) && repErr.Repetition {
@@ -53,7 +58,13 @@ func HandlerRegister(w http.ResponseWriter, r *http.Request, st *storage.Storage
 		return
 	}
 
-	http.SetCookie(w, setAuthorization(secretKey, tokenEXP, userID))
+	token, err := setAuthorization(secretKey, tokenEXP, userID)
+	if err != nil {
+		logger.Error("cannot get token: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	http.SetCookie(w, token)
 
 	w.WriteHeader(http.StatusOK)
 }

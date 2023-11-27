@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
 	id 			SERIAL PRIMARY KEY,
 	login		TEXT NOT NULL,
 	password	TEXT NOT NULL,
+	mail		TEXT NOT NULL,
 	UNIQUE 		(login)
 );
 
@@ -40,8 +41,7 @@ CREATE TABLE IF NOT EXISTS today (
 CREATE TABLE IF NOT EXISTS photo (
 	id 			SERIAL PRIMARY KEY,
 	event_id	INT REFERENCES event(id) ON DELETE CASCADE,
-	url 		TEXT NOT NULL,
-	data 		BYTEA NOT NULL
+	name 		TEXT NOT NULL
 );
 
 -- +goose Down

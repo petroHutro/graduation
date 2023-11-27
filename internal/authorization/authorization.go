@@ -42,15 +42,15 @@ func AuthorizationMiddleware(secretKey string) func(http.Handler) http.Handler {
 				logger.Error("cookies do not contain a token: %v", err)
 				w.WriteHeader(http.StatusUnauthorized)
 				return
-			} else {
-				id, err := getUserID(secretKey, cookie.Value)
-				if err != nil {
-					logger.Error("token does not pass validation")
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
-				r.Header.Set("User_id", strconv.Itoa(id))
 			}
+			id, err := getUserID(secretKey, cookie.Value)
+			if err != nil {
+				logger.Error("token does not pass validation")
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			r.Header.Set("User_id", strconv.Itoa(id))
+
 			next.ServeHTTP(w, r)
 		})
 	}

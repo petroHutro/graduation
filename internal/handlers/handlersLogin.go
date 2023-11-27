@@ -39,7 +39,14 @@ func HandlerLogin(w http.ResponseWriter, r *http.Request, st *storage.Storage, s
 		return
 	}
 
-	http.SetCookie(w, setAuthorization(secretKey, tokenEXP, userID))
+	token, err := setAuthorization(secretKey, tokenEXP, userID)
+	if err != nil {
+		logger.Error("cannot get token: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	http.SetCookie(w, token)
 
 	w.WriteHeader(http.StatusOK)
 }

@@ -4,27 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"graduation/internal/entity"
 	"math"
 	"time"
 )
 
-func (s *Storage) CreateEvent(ctx context.Context, e *Event) error {
-	err := s.SetEvent(ctx, e)
-	if err != nil {
-		return fmt.Errorf("cannot set event: %w", err)
-	}
-
-	for _, image := range e.Images {
-		err := s.SetEventPhoto(ctx, e.ID, image.Filename, image.Base64Data)
-		if err != nil {
-			return fmt.Errorf("cannot set url: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (s *Storage) SetEvent(ctx context.Context, e *Event) error {
+func (s *Storage) setEvent(ctx context.Context, e *entity.Event) error {
 	err := s.db.QueryRowContext(ctx, `
 		INSERT INTO event (user_id, title, description, place, participants, max_participants, date, active)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -34,17 +19,59 @@ func (s *Storage) SetEvent(ctx context.Context, e *Event) error {
 	return err
 }
 
-func (s *Storage) SetEventPhoto(ctx context.Context, eventID int, url string, data []byte) error {
+func (s *Storage) setEventPhoto(ctx context.Context, eventID int, name string) error {
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO photo (event_id, url, data)
-		VALUES ($1, $2, $3)
-	`, eventID, url, data)
+		INSERT INTO photo (event_id, name)
+		VALUES ($1, $2)
+	`, eventID, name)
 
 	return err
 }
 
-func (s *Storage) GetEvent(ctx context.Context, eventID int) (*Event, error) {
-	event := &Event{}
+func (s *Storage) CreateEvent(ctx context.Context, e *entity.Event) error {
+	err := s.setEvent(ctx, e)
+	if err != nil {
+		return fmt.Errorf("cannot set event: %w", err)
+	}
+
+	for _, image := range e.Images {
+		err := s.setEventPhoto(ctx, e.ID, image.Filename)
+		if err != nil {
+			return fmt.Errorf("cannot set photo db: %w", err)
+		}
+		if err := s.ost.Set(image.Filename, image.Base64Data); err != nil {
+			return fmt.Errorf("cannot set photo ost: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *Storage) GetImages(ctx context.Context, eventID int) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT name
+		FROM photo
+		WHERE event_id = $1
+	`, eventID)
+	if err != nil || rows.Err() != nil {
+		return nil, fmt.Errorf("cannot get urls: %w", err)
+	}
+	defer rows.Close()
+
+	var filenames []string
+	for rows.Next() {
+		var filename string
+		err := rows.Scan(&filename)
+		if err != nil {
+			return nil, fmt.Errorf("cannot scan: %w", err)
+		}
+		filenames = append(filenames, filename)
+	}
+	return filenames, nil
+}
+
+func (s *Storage) GetEvent(ctx context.Context, eventID int) (*entity.Event, error) {
+	event := &entity.Event{}
 	err := s.db.QueryRowContext(ctx, `
 		SELECT id, user_id, title, description, place, participants, max_participants, date, active
 		FROM event
@@ -63,28 +90,18 @@ func (s *Storage) GetEvent(ctx context.Context, eventID int) (*Event, error) {
 		return nil, fmt.Errorf("cannot get event: %w", err)
 	}
 
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT url
-		FROM photo
-		WHERE event_id = $1
-	`, eventID)
-	if err != nil || rows.Err() != nil {
-		return nil, fmt.Errorf("cannot get urls: %w", err)
+	urls, err := s.GetImages(ctx, eventID)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get images: %w", err)
 	}
-	defer rows.Close()
+	for _, url := range urls {
+		event.Images = append(event.Images, entity.Image{Filename: url})
+	}
 
-	for rows.Next() {
-		var url string
-		err := rows.Scan(&url)
-		if err != nil {
-			return nil, fmt.Errorf("cannot scan: %w", err)
-		}
-		event.Images = append(event.Images, Image{Filename: url})
-	}
 	return event, nil
 }
 
-func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page int) ([]Event, int, error) {
+func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page int) ([]entity.Event, int, error) {
 	offset := (page - 1) * limit
 	rowsE, err := s.db.QueryContext(ctx, `
 		SELECT id, user_id, title, description, place, participants, max_participants, date, active
@@ -97,9 +114,9 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 	}
 	defer rowsE.Close()
 
-	var events []Event
+	var events []entity.Event
 	for rowsE.Next() {
-		var event Event
+		var event entity.Event
 		err := rowsE.Scan(
 			&event.ID,
 			&event.UserID,
@@ -114,24 +131,14 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 			return nil, 0, fmt.Errorf("cannot scan: %w", err)
 		}
 
-		rowsP, err := s.db.QueryContext(ctx, `
-			SELECT url
-			FROM photo
-			WHERE event_id = $1
-		`, event.ID)
-		if err != nil || rowsP.Err() != nil {
-			return nil, 0, fmt.Errorf("cannot get urls: %w", err)
+		urls, err := s.GetImages(ctx, event.ID)
+		if err != nil {
+			return nil, 0, fmt.Errorf("cannot get images: %w", err)
 		}
-		defer rowsP.Close()
+		for _, url := range urls {
+			event.Images = append(event.Images, entity.Image{Filename: url})
+		}
 
-		for rowsP.Next() {
-			var url string
-			err := rowsP.Scan(&url)
-			if err != nil {
-				return nil, 0, fmt.Errorf("cannot scan: %w", err)
-			}
-			event.Images = append(event.Images, Image{Filename: url})
-		}
 		events = append(events, event)
 	}
 
@@ -150,12 +157,22 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 	return events, count, nil
 }
 
-func (s *Storage) DellPhoto(ctx context.Context, eventID int) error {
+func (s *Storage) dellPhoto(ctx context.Context, eventID int) error {
 	_, err := s.db.ExecContext(ctx, `
 		DELETE FROM photo WHERE event_id = $1
 	`, eventID)
 	if err != nil {
 		return fmt.Errorf("cannot dell photo from db: %w", err)
+	}
+
+	urls, err := s.GetImages(ctx, eventID)
+	if err != nil {
+		return fmt.Errorf("cannot get images: %w", err)
+	}
+	for _, url := range urls {
+		if err := s.ost.Delete(url); err != nil {
+			return fmt.Errorf("cannot dell ost: %w", err)
+		}
 	}
 
 	return nil
@@ -190,7 +207,7 @@ func (s *Storage) DellEvent(ctx context.Context, userID, eventID int) error {
 		return fmt.Errorf("event not for user: %w", err)
 	}
 
-	if err := s.DellPhoto(ctx, eventID); err != nil {
+	if err := s.dellPhoto(ctx, eventID); err != nil {
 		return fmt.Errorf("cannot dell photo: %w", err)
 	}
 

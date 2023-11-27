@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"graduation/internal/entity"
 	"graduation/internal/logger"
 	"graduation/internal/storage"
 	"graduation/internal/utils"
@@ -59,7 +60,7 @@ func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st *storage.Stora
 		return
 	}
 
-	event := storage.Event{
+	event := entity.Event{
 		UserID:          userID,
 		Title:           data.Title,
 		Description:     data.Description,
@@ -71,7 +72,7 @@ func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st *storage.Stora
 	}
 
 	for _, photo := range data.Photo {
-		event.Images = append(event.Images, storage.Image{
+		event.Images = append(event.Images, entity.Image{
 			Filename:   utils.GenerateString() + ".jpg",
 			Base64Data: photo.Base64Data,
 		})

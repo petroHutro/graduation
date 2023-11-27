@@ -4,26 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"graduation/internal/entity"
+	"graduation/internal/utils"
 	"time"
 )
-
-type Image struct {
-	Filename   string
-	Base64Data []byte
-}
-
-type Event struct {
-	ID              int
-	UserID          int
-	Title           string
-	Description     string
-	Place           string
-	Participants    int
-	MaxParticipants int
-	Date            time.Time
-	Active          bool
-	Images          []Image
-}
 
 type EventUsers struct {
 	ID     int
@@ -51,22 +35,27 @@ func (s *Storage) inTransaction(ctx context.Context, f func(ctx context.Context,
 	return nil
 }
 
-func (s *Storage) GetImage(ctx context.Context, filename string) ([]byte, error) {
-	var data []byte
+func (s *Storage) GetImage(ctx context.Context, filename string) (string, error) {
+	// var data []byte
 
-	err := s.db.QueryRowContext(ctx, `
-		SELECT data
-		FROM photo
-		WHERE url = $1
-	`, filename).Scan(&data)
+	// err := s.db.QueryRowContext(ctx, `
+	// 	SELECT data
+	// 	FROM photo
+	// 	WHERE url = $1
+	// `, filename).Scan(&data)
+	// if err != nil {
+	// 	if err == sql.ErrNoRows {
+	// 		return nil, fmt.Errorf("photo not found: %w", &RepError{Err: err, UniqueViolation: true})
+	// 	}
+	// 	return nil, fmt.Errorf("cannot get photo: %w", err)
+	// }
+
+	// return data, nil
+	url, err := s.ost.Get(filename)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("photo not found: %w", &RepError{Err: err, UniqueViolation: true})
-		}
-		return nil, fmt.Errorf("cannot get photo: %w", err)
+		return "", fmt.Errorf("photo not found: %w", err)
 	}
-
-	return data, nil
+	return url, nil
 }
 
 func (s *Storage) GetEventsToday(ctx context.Context, date time.Time) ([]EventUsers, error) {
@@ -138,7 +127,7 @@ func (s *Storage) EventsToday(ctx context.Context, date time.Time) error {
 	return nil
 }
 
-func (s *Storage) GetUserToday(ctx context.Context, date time.Time) (map[int]int, error) {
+func (s *Storage) getUserToday(ctx context.Context, date time.Time) (map[int]int, error) {
 	day := date.Day()
 	hour := date.Hour()
 	rowsEvent, err := s.db.QueryContext(ctx, `
@@ -164,38 +153,88 @@ func (s *Storage) GetUserToday(ctx context.Context, date time.Time) (map[int]int
 	return userEvent, nil
 }
 
-func send(eventID, userID int) error {
-	fmt.Println("send message", eventID, userID)
-	return nil
-}
-
-func (s *Storage) SendMessage(ctx context.Context, date time.Time) error {
-	err := s.inTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
-		userEvent, err := s.GetUserToday(ctx, date)
-		if err != nil {
-			return fmt.Errorf("cannot get user today: %w", err)
-		}
-
-		for eventID, userID := range userEvent {
-			err := send(eventID, userID)
-			if err != nil {
-				return fmt.Errorf("cannot send message: %w", err)
-			}
-
-			_, err = s.db.ExecContext(ctx, `
-				DELETE FROM today WHERE event_id = $1 AND user_id = $2
-			`, eventID, userID)
-			if err != nil {
-				return fmt.Errorf("cannot dell today: %w", err)
-			}
-		}
-
-		return nil
-	})
-
+func (s *Storage) SendMessage(ctx context.Context, date time.Time, send func(mail, body string, urls []string) error) error {
+	messages, err := s.getMessage(ctx, date)
 	if err != nil {
-		return fmt.Errorf("cannot send message: %w", err)
+		return fmt.Errorf("cannot get message: %w", err)
+	}
+
+	for _, message := range messages {
+		err := send(message.Mail, message.Body, message.Urls)
+		if err != nil {
+			return fmt.Errorf("cannot send message: %w", err)
+		}
+
+		// _, err = s.db.ExecContext(ctx, `
+		// 	DELETE FROM today WHERE event_id = $1 AND user_id = $2
+		// `, message.EventID, message.UserID)
+		// if err != nil {
+		// 	return fmt.Errorf("cannot dell today: %w", err)
+		// }
 	}
 
 	return nil
+}
+
+func (s *Storage) getMessage(ctx context.Context, date time.Time) ([]entity.Message, error) {
+	userEvent, err := s.getUserToday(ctx, date)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get user today: %w", err)
+	}
+
+	var messages []entity.Message
+	for eventID, userID := range userEvent {
+		mail, err := s.getMail(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get mail: %w", err)
+		}
+
+		event, err := s.GetEvent(ctx, eventID)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get event: %w", err)
+		}
+
+		body, err := s.getBody(ctx, event)
+		if err != nil {
+			return nil, fmt.Errorf("cannot get body: %w", err)
+		}
+
+		var urls []string
+		for _, url := range event.Images {
+			urls = append(urls, url.Filename)
+		}
+
+		messages = append(messages, entity.Message{
+			EventID: eventID,
+			UserID:  userID,
+			Mail:    mail,
+			Body:    body,
+			Urls:    urls})
+	}
+
+	return messages, nil
+}
+
+func (s *Storage) getMail(ctx context.Context, userID int) (string, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT mail 
+		FROM users WHERE id = $1;
+	`, userID)
+
+	var mail string
+	err := row.Scan(&mail)
+	if err != nil {
+		return "", fmt.Errorf("cannot scan: %w", err)
+	}
+
+	return mail, nil
+}
+
+func (s *Storage) getBody(ctx context.Context, event *entity.Event) (string, error) {
+	body, err := utils.GenerateHTML(event)
+	if err != nil {
+		return "", fmt.Errorf("cannot get event: %w", err)
+	}
+
+	return body, nil
 }
