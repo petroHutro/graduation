@@ -47,11 +47,11 @@ type Token struct {
 }
 
 type SMTP struct {
-	SmtpServer   string `json:"smtpServer"`
-	SmtpUsername string `json:"smtpUsername"`
-	SmtpPassword string `json:"smtpPassword"`
+	SMTPServer   string `json:"smtpServer"`
+	SMTPUsername string `json:"smtpUsername"`
+	SMTPPassword string `json:"smtpPassword"`
 	From         string `json:"from"`
-	SmtpPort     int    `json:"smtpPort"`
+	SMTPPort     int    `json:"smtpPort"`
 }
 
 type Flags struct {

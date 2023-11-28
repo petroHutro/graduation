@@ -16,8 +16,6 @@ func parsSMTP(flags *Flags) error {
 		return fmt.Errorf("cannot Read In Config smtp: %w", err)
 	}
 
-	// viper.SetDefault("smtp.smtpPort", 587)
-
 	err = viper.Unmarshal(&flags.SMTP)
 	if err != nil {
 		return fmt.Errorf("cannot Unmarshal SMTP: %w", err)

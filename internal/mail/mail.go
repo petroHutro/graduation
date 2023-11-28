@@ -24,7 +24,7 @@ type Mail struct {
 
 func Init(conf *config.SMTP) (*Mail, error) {
 	mail := Mail{
-		Con:      gomail.NewDialer(conf.SmtpServer, conf.SmtpPort, conf.SmtpUsername, conf.SmtpPassword),
+		Con:      gomail.NewDialer(conf.SMTPServer, conf.SMTPPort, conf.SMTPUsername, conf.SMTPPassword),
 		mailData: mailData{from: conf.From},
 	}
 	if err := mail.CheckConnection(); err != nil {
@@ -48,9 +48,9 @@ func (m *Mail) CheckConnection() error {
 
 func (m *Mail) Send(to, body string, urls []string) error {
 	message := gomail.NewMessage()
-	message.SetAddressHeader("From", m.from, "Containerum Go Course")
+	message.SetAddressHeader("From", m.from, "EVENT.NE")
 	message.SetAddressHeader("To", to, "")
-	message.SetHeader("Subject", "You are successfully registered!")
+	message.SetHeader("Subject", "Event in 3 hours")
 	// for i, image := range urls {
 	// 	cid := "image" + strconv.Itoa(i)
 	// 	body = strings.Replace(body, image, "cid:"+cid, 1)
