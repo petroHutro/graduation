@@ -8,28 +8,35 @@ package mail
 
 import (
 	"fmt"
+	"graduation/internal/config"
 	"strconv"
 	"strings"
 
 	"gopkg.in/gomail.v2"
 )
 
-const (
-	smtpServer   = "smtp.yandex.ru"
-	smtpPort     = 465
-	smtpUsername = "event.ne@yandex.ru"
-	smtpPassword = "pnkofqqiobcynulu"
+// const (
+// 	smtpServer   = "smtp.yandex.ru"
+// 	smtpPort     = 465
+// 	smtpUsername = "event.ne@yandex.ru"
+// 	smtpPassword = "pnkofqqiobcynulu"
 
-	from = "event.ne@yandex.ru"
-)
+// 	from = "event.ne@yandex.ru"
+// )
+
+type mailData struct {
+	from string
+}
 
 type Mail struct {
 	Con *gomail.Dialer
+	mailData
 }
 
-func Init() (*Mail, error) {
+func Init(conf *config.SMTP) (*Mail, error) {
 	mail := Mail{
-		Con: gomail.NewDialer(smtpServer, smtpPort, smtpUsername, smtpPassword),
+		Con:      gomail.NewDialer(conf.SmtpServer, conf.SmtpPort, conf.SmtpUsername, conf.SmtpPassword),
+		mailData: mailData{from: conf.From},
 	}
 	if err := mail.CheckConnection(); err != nil {
 		return nil, fmt.Errorf("cannot connect: %w", err)
@@ -52,7 +59,7 @@ func (m *Mail) CheckConnection() error {
 
 func (m *Mail) Send(to, body string, urls []string) error {
 	message := gomail.NewMessage()
-	message.SetAddressHeader("From", from, "Containerum Go Course")
+	message.SetAddressHeader("From", m.from, "Containerum Go Course")
 	message.SetAddressHeader("To", to, "")
 	message.SetHeader("Subject", "You are successfully registered!")
 	for i, image := range urls {

@@ -1,0 +1,7 @@
+{
+	"smtpServer": "smtp.yandex.ru",
+	"smtpUsername": "event.ne@yandex.ru",
+	"smtpPassword": "pnkofqqiobcynulu",
+	"from": "event.ne@yandex.ru",
+	"smtpPort": 465
+  }

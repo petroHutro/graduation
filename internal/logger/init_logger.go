@@ -43,15 +43,15 @@ func newMultiLogger(filePath string) (*zap.Logger, error) {
 }
 
 func InitLogger(conf config.Logger) error {
-	if conf.MultiFlag {
-		logger, err := newMultiLogger(conf.FilePath)
+	if conf.LoggerMultiFlag {
+		logger, err := newMultiLogger(conf.LoggerFilePath)
 		if err != nil {
 			return fmt.Errorf("cannot create multi logger: %w", err)
 		}
 		l.logger = logger
 		return nil
-	} else if conf.FileFlag {
-		logger, err := newFileLogger(conf.FilePath)
+	} else if conf.LoggerFileFlag {
+		logger, err := newFileLogger(conf.LoggerFilePath)
 		if err != nil {
 			return fmt.Errorf("cannot create file logger: %w", err)
 		}

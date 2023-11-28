@@ -3,12 +3,13 @@ package storage
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"graduation/internal/entity"
 	"graduation/internal/objectstorage"
 
 	"time"
 )
+
+//go:generate mockgen -source=storage.go -destination=mock/mock.go -package=storage
 
 type Storage interface {
 	SetUser(ctx context.Context, login, password, mail string) (int, error)
@@ -39,24 +40,4 @@ type RepError struct {
 
 func (e *RepError) Error() string {
 	return e.Err.Error()
-}
-
-func newStorage(databaseDSN string) (*storageData, error) {
-	db, err := Connection(databaseDSN)
-	if err != nil {
-		return nil, fmt.Errorf("cannot connection database: %w", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-	if err := db.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("cannot ping database: %w", err)
-	}
-
-	ost, err := objectstorage.Connect()
-	if err != nil {
-		return nil, fmt.Errorf("cannot connection object storage: %w", err)
-	}
-
-	return &storageData{db: db, ost: ost}, nil
 }

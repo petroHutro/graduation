@@ -22,7 +22,7 @@ import (
 func TestHandlerEventsGet(t *testing.T) {
 	type mockBehavior func(r *mock.MockStorage, ctx context.Context, from, to time.Time, limit, page int)
 
-	if err := logger.InitLogger(config.Logger{FilePath: "file.log", FileFlag: false, MultiFlag: false}); err != nil {
+	if err := logger.InitLogger(config.Logger{LoggerFilePath: "file.log", LoggerFileFlag: false, LoggerMultiFlag: false}); err != nil {
 		logger.Panic(err.Error())
 	}
 

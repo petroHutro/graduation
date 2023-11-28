@@ -2,6 +2,7 @@ package notification
 
 import (
 	"context"
+	"graduation/internal/config"
 	"graduation/internal/logger"
 	"graduation/internal/mail"
 	"graduation/internal/storage"
@@ -18,8 +19,8 @@ func SendNotification(st storage.Storage, m *mail.Mail) error {
 	return nil
 }
 
-func LoopNotification(st storage.Storage) {
-	// con, err := mail.Init()
+func LoopNotification(st storage.Storage, conf *config.SMTP) {
+	// con, err := mail.Init(conf)
 	// if err != nil {
 	// 	logger.Error("cannot send message: %v", err)
 	// }

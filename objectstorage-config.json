@@ -1,0 +1,7 @@
+{
+	"storageAccessKey": "ZRpj735BW7WAi0Wt2lYq",
+	"storageSecretKey": "RuoeY2yEFbaB5TfBDRVOAv6wMGCCUY2iNK2OPTop",
+	"storageEndpoint": "127.0.0.1:9000",
+	"storageBucketName": "event123",
+	"storageUseSSL": false
+}
