@@ -21,7 +21,7 @@ func EncodeID(id int) string {
 func DecodeID(encodedID string) (int, error) {
 	idBytes, err := base64.StdEncoding.DecodeString(encodedID)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("cannot Decode String: %v", err)
 	}
 
 	encodedBytes := []byte(secretKey)
@@ -32,7 +32,7 @@ func DecodeID(encodedID string) (int, error) {
 	var decodedID int
 	_, err = fmt.Sscanf(string(idBytes), "%d", &decodedID)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("cannot Sscanf: %v", err)
 	}
 
 	return decodedID, nil

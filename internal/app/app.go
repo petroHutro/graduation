@@ -19,7 +19,7 @@ import (
 )
 
 type App struct {
-	storage *storage.Storage
+	storage storage.Storage
 	conf    *config.Flags
 	router  *chi.Mux
 }

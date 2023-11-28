@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-func (s *Storage) SetUser(ctx context.Context, login, password, mail string) (int, error) {
+func (s *storageData) SetUser(ctx context.Context, login, password, mail string) (int, error) {
 	var id int
 	err := s.db.QueryRowContext(ctx, `
 		INSERT INTO users (login, password, mail)
@@ -30,7 +30,7 @@ func (s *Storage) SetUser(ctx context.Context, login, password, mail string) (in
 	return id, nil
 }
 
-func (s *Storage) GetUser(ctx context.Context, login, password string) (int, error) {
+func (s *storageData) GetUser(ctx context.Context, login, password string) (int, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT id 
 		FROM users WHERE login = $1 AND password = $2;
@@ -45,7 +45,7 @@ func (s *Storage) GetUser(ctx context.Context, login, password string) (int, err
 	return id, nil
 }
 
-func (s *Storage) AddEventUser(ctx context.Context, eventID, userID int) error {
+func (s *storageData) AddEventUser(ctx context.Context, eventID, userID int) error {
 	err := s.inTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		_, err := tx.ExecContext(ctx, `
 			INSERT INTO record (event_id, user_id)
@@ -93,7 +93,7 @@ func (s *Storage) AddEventUser(ctx context.Context, eventID, userID int) error {
 	return nil
 }
 
-func (s *Storage) DellEventUser(ctx context.Context, eventID, userID int) error {
+func (s *storageData) DellEventUser(ctx context.Context, eventID, userID int) error {
 	err := s.inTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
 		rows, err := tx.ExecContext(ctx, `
 			DELETE FROM record WHERE user_id = $1 AND event_id = $2
@@ -152,7 +152,7 @@ func (s *Storage) DellEventUser(ctx context.Context, eventID, userID int) error 
 	return nil
 }
 
-func (s *Storage) GetUserEvents(ctx context.Context, userID int) ([]entity.Event, error) {
+func (s *storageData) GetUserEvents(ctx context.Context, userID int) ([]entity.Event, error) {
 	rowsE, err := s.db.QueryContext(ctx, `
 		SELECT event.id, event.user_id, event.title, event.description, event.place, event.participants, event.max_participants, event.date, event.active
 		FROM event

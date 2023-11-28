@@ -15,7 +15,7 @@ type EventUsers struct {
 	UserID []int
 }
 
-func (s *Storage) inTransaction(ctx context.Context, f func(ctx context.Context, tx *sql.Tx) error) error {
+func (s *storageData) inTransaction(ctx context.Context, f func(ctx context.Context, tx *sql.Tx) error) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return fmt.Errorf("cannot begin: %w", err)
@@ -35,7 +35,7 @@ func (s *Storage) inTransaction(ctx context.Context, f func(ctx context.Context,
 	return nil
 }
 
-func (s *Storage) GetImage(ctx context.Context, filename string) (string, error) {
+func (s *storageData) GetImage(ctx context.Context, filename string) (string, error) {
 	// var data []byte
 
 	// err := s.db.QueryRowContext(ctx, `
@@ -58,7 +58,7 @@ func (s *Storage) GetImage(ctx context.Context, filename string) (string, error)
 	return url, nil
 }
 
-func (s *Storage) GetEventsToday(ctx context.Context, date time.Time) ([]EventUsers, error) {
+func (s *storageData) GetEventsToday(ctx context.Context, date time.Time) ([]EventUsers, error) {
 	rowsEvent, err := s.db.QueryContext(ctx, `
 		SELECT id, date
 		FROM event
@@ -105,7 +105,7 @@ func (s *Storage) GetEventsToday(ctx context.Context, date time.Time) ([]EventUs
 	return today, nil
 }
 
-func (s *Storage) EventsToday(ctx context.Context, date time.Time) error {
+func (s *storageData) EventsToday(ctx context.Context, date time.Time) error {
 	events, err := s.GetEventsToday(ctx, date)
 	if err != nil {
 		return fmt.Errorf("cannot get events today: %w", err)
@@ -127,7 +127,7 @@ func (s *Storage) EventsToday(ctx context.Context, date time.Time) error {
 	return nil
 }
 
-func (s *Storage) getUserToday(ctx context.Context, date time.Time) (map[int]int, error) {
+func (s *storageData) getUserToday(ctx context.Context, date time.Time) (map[int]int, error) {
 	day := date.Day()
 	hour := date.Hour()
 	rowsEvent, err := s.db.QueryContext(ctx, `
@@ -153,7 +153,7 @@ func (s *Storage) getUserToday(ctx context.Context, date time.Time) (map[int]int
 	return userEvent, nil
 }
 
-func (s *Storage) SendMessage(ctx context.Context, date time.Time, send func(mail, body string, urls []string) error) error {
+func (s *storageData) SendMessage(ctx context.Context, date time.Time, send func(mail, body string, urls []string) error) error {
 	messages, err := s.getMessage(ctx, date)
 	if err != nil {
 		return fmt.Errorf("cannot get message: %w", err)
@@ -176,7 +176,7 @@ func (s *Storage) SendMessage(ctx context.Context, date time.Time, send func(mai
 	return nil
 }
 
-func (s *Storage) getMessage(ctx context.Context, date time.Time) ([]entity.Message, error) {
+func (s *storageData) getMessage(ctx context.Context, date time.Time) ([]entity.Message, error) {
 	userEvent, err := s.getUserToday(ctx, date)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get user today: %w", err)
@@ -215,7 +215,7 @@ func (s *Storage) getMessage(ctx context.Context, date time.Time) ([]entity.Mess
 	return messages, nil
 }
 
-func (s *Storage) getMail(ctx context.Context, userID int) (string, error) {
+func (s *storageData) getMail(ctx context.Context, userID int) (string, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT mail 
 		FROM users WHERE id = $1;
@@ -230,7 +230,7 @@ func (s *Storage) getMail(ctx context.Context, userID int) (string, error) {
 	return mail, nil
 }
 
-func (s *Storage) getBody(ctx context.Context, event *entity.Event) (string, error) {
+func (s *storageData) getBody(ctx context.Context, event *entity.Event) (string, error) {
 	body, err := utils.GenerateHTML(event)
 	if err != nil {
 		return "", fmt.Errorf("cannot get event: %w", err)

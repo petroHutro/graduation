@@ -30,7 +30,7 @@ type ObjectSt struct {
 }
 
 type Storage struct {
-	Client *minio.Client
+	client *minio.Client
 }
 
 func Connect() (*Storage, error) {
@@ -42,7 +42,7 @@ func Connect() (*Storage, error) {
 		return nil, fmt.Errorf("cannot connect: %w", err)
 	}
 
-	storage := Storage{Client: client}
+	storage := Storage{client: client}
 	if err := storage.creatBucket(); err != nil {
 		return nil, fmt.Errorf("cannot creat bucket: %w", err)
 	}
@@ -51,13 +51,13 @@ func Connect() (*Storage, error) {
 }
 
 func (s *Storage) creatBucket() error {
-	exists, err := s.Client.BucketExists(context.Background(), bucketName)
+	exists, err := s.client.BucketExists(context.Background(), bucketName)
 	if err != nil {
 		return fmt.Errorf("cannot exists: %w", err)
 	}
 
 	if !exists {
-		err = s.Client.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{})
+		err = s.client.MakeBucket(context.Background(), bucketName, minio.MakeBucketOptions{})
 		if err != nil {
 			return fmt.Errorf("cannot creat bucket: %w", err)
 		}
@@ -76,7 +76,7 @@ func (s *Storage) Set(objectName string, fileContent []byte) error {
 	// 	minio.PutObjectOptions{ContentType: contentType},
 	// )
 
-	_, err := s.Client.PutObject(
+	_, err := s.client.PutObject(
 		context.Background(),
 		bucketName,
 		objectName,
@@ -93,7 +93,7 @@ func (s *Storage) Set(objectName string, fileContent []byte) error {
 }
 
 func (s *Storage) Delete(objectName string) error {
-	err := s.Client.RemoveObject(
+	err := s.client.RemoveObject(
 		context.Background(),
 		bucketName,
 		objectName,
@@ -107,7 +107,7 @@ func (s *Storage) Delete(objectName string) error {
 
 func (s *Storage) Get(objectName string) (string, error) {
 	expiration := 1 * time.Hour
-	presignedURL, err := s.Client.PresignedGetObject(context.Background(), bucketName, objectName, expiration, nil)
+	presignedURL, err := s.client.PresignedGetObject(context.Background(), bucketName, objectName, expiration, nil)
 	if err != nil {
 		return "", fmt.Errorf("cannot set file: %w", err)
 	}

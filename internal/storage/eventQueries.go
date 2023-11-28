@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func (s *Storage) setEvent(ctx context.Context, e *entity.Event) error {
+func (s *storageData) setEvent(ctx context.Context, e *entity.Event) error {
 	err := s.db.QueryRowContext(ctx, `
 		INSERT INTO event (user_id, title, description, place, participants, max_participants, date, active)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -19,7 +19,7 @@ func (s *Storage) setEvent(ctx context.Context, e *entity.Event) error {
 	return err
 }
 
-func (s *Storage) setEventPhoto(ctx context.Context, eventID int, name string) error {
+func (s *storageData) setEventPhoto(ctx context.Context, eventID int, name string) error {
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO photo (event_id, name)
 		VALUES ($1, $2)
@@ -28,7 +28,7 @@ func (s *Storage) setEventPhoto(ctx context.Context, eventID int, name string) e
 	return err
 }
 
-func (s *Storage) CreateEvent(ctx context.Context, e *entity.Event) error {
+func (s *storageData) CreateEvent(ctx context.Context, e *entity.Event) error {
 	err := s.setEvent(ctx, e)
 	if err != nil {
 		return fmt.Errorf("cannot set event: %w", err)
@@ -47,7 +47,7 @@ func (s *Storage) CreateEvent(ctx context.Context, e *entity.Event) error {
 	return nil
 }
 
-func (s *Storage) GetImages(ctx context.Context, eventID int) ([]string, error) {
+func (s *storageData) GetImages(ctx context.Context, eventID int) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT name
 		FROM photo
@@ -70,7 +70,7 @@ func (s *Storage) GetImages(ctx context.Context, eventID int) ([]string, error) 
 	return filenames, nil
 }
 
-func (s *Storage) GetEvent(ctx context.Context, eventID int) (*entity.Event, error) {
+func (s *storageData) GetEvent(ctx context.Context, eventID int) (*entity.Event, error) {
 	event := &entity.Event{}
 	err := s.db.QueryRowContext(ctx, `
 		SELECT id, user_id, title, description, place, participants, max_participants, date, active
@@ -101,7 +101,7 @@ func (s *Storage) GetEvent(ctx context.Context, eventID int) (*entity.Event, err
 	return event, nil
 }
 
-func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page int) ([]entity.Event, int, error) {
+func (s *storageData) GetEvents(ctx context.Context, from, to time.Time, limit, page int) ([]entity.Event, int, error) {
 	offset := (page - 1) * limit
 	rowsE, err := s.db.QueryContext(ctx, `
 		SELECT id, user_id, title, description, place, participants, max_participants, date, active
@@ -157,7 +157,7 @@ func (s *Storage) GetEvents(ctx context.Context, from, to time.Time, limit, page
 	return events, count, nil
 }
 
-func (s *Storage) dellPhoto(ctx context.Context, eventID int) error {
+func (s *storageData) dellPhoto(ctx context.Context, eventID int) error {
 	_, err := s.db.ExecContext(ctx, `
 		DELETE FROM photo WHERE event_id = $1
 	`, eventID)
@@ -178,7 +178,7 @@ func (s *Storage) dellPhoto(ctx context.Context, eventID int) error {
 	return nil
 }
 
-func (s *Storage) DellEvent(ctx context.Context, userID, eventID int) error {
+func (s *storageData) DellEvent(ctx context.Context, userID, eventID int) error {
 	var id int
 	err := s.db.QueryRowContext(ctx, `
 		SELECT id
@@ -221,7 +221,7 @@ func (s *Storage) DellEvent(ctx context.Context, userID, eventID int) error {
 	return nil
 }
 
-func (s *Storage) CloseEvent(ctx context.Context, userID, eventID int) error {
+func (s *storageData) CloseEvent(ctx context.Context, userID, eventID int) error {
 	rows, err := s.db.ExecContext(ctx, `
 		UPDATE event
 			SET active = false

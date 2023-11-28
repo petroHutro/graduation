@@ -66,7 +66,7 @@ func intDataEventsGet() *DataEventsGet {
 	return &data
 }
 
-func HandlerEventsGet(w http.ResponseWriter, r *http.Request, st *storage.Storage) {
+func HandlerEventsGet(w http.ResponseWriter, r *http.Request, st storage.Storage) {
 	data := intDataEventsGet()
 
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {

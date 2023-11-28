@@ -19,7 +19,7 @@ func Connection(databaseDSN string) (*sql.DB, error) {
 	return db, nil
 }
 
-func InitStorage(conf *config.Storage) (*Storage, error) {
+func InitStorage(conf *config.Storage) (Storage, error) {
 	st, err := newStorage(conf.DatabaseDSN)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create data base: %w", err)

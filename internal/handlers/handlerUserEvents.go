@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func HandlerUserEvents(w http.ResponseWriter, r *http.Request, st *storage.Storage) {
+func HandlerUserEvents(w http.ResponseWriter, r *http.Request, st storage.Storage) {
 	userID, err := strconv.Atoi(r.Header.Get("User_id"))
 	if err != nil {
 		logger.Error("cannot get user id: %v", err)

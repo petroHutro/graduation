@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func HandlerEventDell(w http.ResponseWriter, r *http.Request, st *storage.Storage) {
+func HandlerEventDell(w http.ResponseWriter, r *http.Request, st storage.Storage) {
 	eventID, err := encoding.DecodeID(r.URL.String()[16:])
 	if err != nil {
 		logger.Error("cannot get id from url: %v", err)
