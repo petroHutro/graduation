@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"graduation/internal/config"
-	ost "graduation/internal/objectstorage"
+	"graduation/internal/ostorage"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose"
@@ -25,7 +25,7 @@ func newStorage(conf *config.Storage) (*storageData, error) {
 		return nil, fmt.Errorf("cannot ping database: %w", err)
 	}
 
-	ost, err := ost.Connect(&conf.ObjectStorage)
+	ost, err := ostorage.Connect(&conf.ObjectStorage)
 	if err != nil {
 		return nil, fmt.Errorf("cannot connection object storage: %w", err)
 	}

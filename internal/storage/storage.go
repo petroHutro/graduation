@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"graduation/internal/entity"
-	"graduation/internal/objectstorage"
+	"graduation/internal/ostorage"
 
 	"time"
 )
@@ -29,7 +29,7 @@ type Storage interface {
 
 type storageData struct {
 	db  *sql.DB
-	ost *objectstorage.Storage
+	ost *ostorage.Storage
 }
 
 type RepError struct {

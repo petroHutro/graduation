@@ -1,4 +1,4 @@
-package objectstorage
+package ostorage
 
 import (
 	"bytes"
