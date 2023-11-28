@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS event (
 	participants		INT DEFAULT 0,
 	max_participants	INT DEFAULT 0,
 	date 				timestamp,
-	active 				BOOLEAN DEFAULT FALSE
+	active 				BOOLEAN DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS record (
@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS today (
 	event_id	INT REFERENCES event(id) ON DELETE CASCADE,
 	user_id		INT REFERENCES users(id) ON DELETE CASCADE,
 	date 		timestamp,
+	send 		BOOLEAN DEFAULT FALSE,
 	UNIQUE 		(event_id, user_id)
 );
 

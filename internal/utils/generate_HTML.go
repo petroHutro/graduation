@@ -18,9 +18,9 @@ func GenerateHTML(event *entity.Event) (string, error) {
 	<body>
 		<h1>{{.Title}}</h1>
 		
-		{{if .PhotoURLs}}
-			{{range .PhotoURLs}}
-				<img src="{{.}}" alt="Event Image" style="max-width: 50%;">
+		{{if .Images}}
+			{{range .Images}}
+				<img src="{{.Filename}}" alt="Event Image" style="max-width: 50%;">
 			{{end}}
 		{{else}}
 			<p>No images available</p>

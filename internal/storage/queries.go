@@ -36,21 +36,6 @@ func (s *storageData) inTransaction(ctx context.Context, f func(ctx context.Cont
 }
 
 func (s *storageData) GetImage(ctx context.Context, filename string) (string, error) {
-	// var data []byte
-
-	// err := s.db.QueryRowContext(ctx, `
-	// 	SELECT data
-	// 	FROM photo
-	// 	WHERE url = $1
-	// `, filename).Scan(&data)
-	// if err != nil {
-	// 	if err == sql.ErrNoRows {
-	// 		return nil, fmt.Errorf("photo not found: %w", &RepError{Err: err, UniqueViolation: true})
-	// 	}
-	// 	return nil, fmt.Errorf("cannot get photo: %w", err)
-	// }
-
-	// return data, nil
 	url, err := s.ost.Get(filename)
 	if err != nil {
 		return "", fmt.Errorf("photo not found: %w", err)
@@ -58,12 +43,68 @@ func (s *storageData) GetImage(ctx context.Context, filename string) (string, er
 	return url, nil
 }
 
-func (s *storageData) GetEventsToday(ctx context.Context, date time.Time) ([]EventUsers, error) {
+func (s *storageData) EventsToday(ctx context.Context, date time.Time) error {
+	events, err := s.getEventsToday(ctx, date)
+	if err != nil {
+		return fmt.Errorf("cannot get events today: %w", err)
+	}
+
+	for _, event := range events {
+		for _, user := range event.UserID {
+			_, err = s.db.ExecContext(ctx, `
+				INSERT INTO today (event_id, user_id, date)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (event_id, user_id) DO NOTHING;
+			`, event.ID, user, event.Date)
+			if err != nil {
+				return fmt.Errorf("cannot set: %w", err)
+			}
+		}
+	}
+
+	if err := s.dellEventToday(ctx, date); err != nil {
+		return fmt.Errorf("cannot dell old event: %w", err)
+	}
+
+	return nil
+}
+
+func (s *storageData) SendMessage(ctx context.Context, date time.Time, send func(mail, body string, urls []string) error) error {
+	messages, err := s.getMessage(ctx, date)
+	if err != nil {
+		return fmt.Errorf("cannot get message: %w", err)
+	}
+
+	for _, message := range messages {
+		err := send(message.Mail, message.Body, message.Urls)
+		if err != nil {
+			return fmt.Errorf("cannot send message: %w", err)
+		}
+
+		_, err = s.db.ExecContext(ctx, `
+			UPDATE today
+				SET send = true
+				WHERE event_id = $1 AND user_id = $2
+		`, message.EventID, message.UserID)
+		if err != nil {
+			return fmt.Errorf("cannot update today: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *storageData) getEventsToday(ctx context.Context, date time.Time) ([]EventUsers, error) {
 	rowsEvent, err := s.db.QueryContext(ctx, `
 		SELECT id, date
 		FROM event
 		WHERE EXTRACT(YEAR FROM date) = $1 AND EXTRACT(MONTH FROM date) = $2 AND EXTRACT(DAY FROM date) = $3
 		AND active = true
+		AND NOT EXISTS (
+			SELECT 1
+			FROM today
+			WHERE today.event_id = event.id
+		)
 		ORDER BY date
 	`, date.Year(), date.Month(), date.Day())
 	if err != nil || rowsEvent.Err() != nil {
@@ -105,36 +146,28 @@ func (s *storageData) GetEventsToday(ctx context.Context, date time.Time) ([]Eve
 	return today, nil
 }
 
-func (s *storageData) EventsToday(ctx context.Context, date time.Time) error {
-	events, err := s.GetEventsToday(ctx, date)
+func (s *storageData) dellEventToday(ctx context.Context, date time.Time) error {
+	_, err := s.db.ExecContext(ctx, `
+		DELETE FROM today 
+		WHERE send = TRUE
+		AND (EXTRACT(YEAR FROM date) < $1 or EXTRACT(MONTH FROM date) < $2 or EXTRACT(DAY FROM date) < $3)
+	`, date.Year(), date.Month(), date.Day())
 	if err != nil {
-		return fmt.Errorf("cannot get events today: %w", err)
-	}
-
-	for _, event := range events {
-		for _, user := range event.UserID {
-			_, err = s.db.ExecContext(ctx, `
-				INSERT INTO today (event_id, user_id, date)
-				VALUES ($1, $2, $3)
-				ON CONFLICT (event_id, user_id) DO NOTHING;
-			`, event.ID, user, event.Date)
-			if err != nil {
-				return fmt.Errorf("cannot set: %w", err)
-			}
-		}
+		return fmt.Errorf("cannot dell today: %w", err)
 	}
 
 	return nil
 }
 
 func (s *storageData) getUserToday(ctx context.Context, date time.Time) (map[int]int, error) {
-	day := date.Day()
-	hour := date.Hour()
+	formattedTime := date.Format("2006-01-02 15:04:05")
 	rowsEvent, err := s.db.QueryContext(ctx, `
 		SELECT event_id, user_id
 		FROM today
-		WHERE EXTRACT(DAY FROM date) <= $1 AND EXTRACT(HOUR FROM date) <= $2
-	`, day, hour)
+		WHERE send = FALSE 
+		AND ABS(EXTRACT(EPOCH FROM ($1 - date)) / 3600) <= 3
+		ORDER BY date;
+	`, formattedTime)
 	if err != nil || rowsEvent.Err() != nil {
 		return nil, fmt.Errorf("cannot get user_id: %w", err)
 	}
@@ -151,29 +184,6 @@ func (s *storageData) getUserToday(ctx context.Context, date time.Time) (map[int
 	}
 
 	return userEvent, nil
-}
-
-func (s *storageData) SendMessage(ctx context.Context, date time.Time, send func(mail, body string, urls []string) error) error {
-	messages, err := s.getMessage(ctx, date)
-	if err != nil {
-		return fmt.Errorf("cannot get message: %w", err)
-	}
-
-	for _, message := range messages {
-		err := send(message.Mail, message.Body, message.Urls)
-		if err != nil {
-			return fmt.Errorf("cannot send message: %w", err)
-		}
-
-		// _, err = s.db.ExecContext(ctx, `
-		// 	DELETE FROM today WHERE event_id = $1 AND user_id = $2
-		// `, message.EventID, message.UserID)
-		// if err != nil {
-		// 	return fmt.Errorf("cannot dell today: %w", err)
-		// }
-	}
-
-	return nil
 }
 
 func (s *storageData) getMessage(ctx context.Context, date time.Time) ([]entity.Message, error) {
@@ -194,14 +204,19 @@ func (s *storageData) getMessage(ctx context.Context, date time.Time) ([]entity.
 			return nil, fmt.Errorf("cannot get event: %w", err)
 		}
 
+		var urls []string
+		for index, image := range event.Images {
+			url, err := s.GetImage(ctx, image.Filename)
+			if err != nil {
+				return nil, fmt.Errorf("cannot get url: %w", err)
+			}
+			event.Images[index].Filename = url
+			urls = append(urls, url)
+		}
+
 		body, err := s.getBody(ctx, event)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get body: %w", err)
-		}
-
-		var urls []string
-		for _, url := range event.Images {
-			urls = append(urls, url.Filename)
 		}
 
 		messages = append(messages, entity.Message{

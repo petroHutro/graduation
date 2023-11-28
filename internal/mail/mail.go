@@ -9,20 +9,9 @@ package mail
 import (
 	"fmt"
 	"graduation/internal/config"
-	"strconv"
-	"strings"
 
 	"gopkg.in/gomail.v2"
 )
-
-// const (
-// 	smtpServer   = "smtp.yandex.ru"
-// 	smtpPort     = 465
-// 	smtpUsername = "event.ne@yandex.ru"
-// 	smtpPassword = "pnkofqqiobcynulu"
-
-// 	from = "event.ne@yandex.ru"
-// )
 
 type mailData struct {
 	from string
@@ -62,17 +51,17 @@ func (m *Mail) Send(to, body string, urls []string) error {
 	message.SetAddressHeader("From", m.from, "Containerum Go Course")
 	message.SetAddressHeader("To", to, "")
 	message.SetHeader("Subject", "You are successfully registered!")
-	for i, image := range urls {
-		cid := "image" + strconv.Itoa(i)
-		body = strings.Replace(body, image, "cid:"+cid, 1)
-		message.Embed(image, gomail.Rename(cid))
-	}
+	// for i, image := range urls {
+	// 	cid := "image" + strconv.Itoa(i)
+	// 	body = strings.Replace(body, image, "cid:"+cid, 1)
+	// 	message.Embed(image, gomail.Rename(cid))
+	// 	message.EmbedURL(image, gomail.Rename(cid))
+	// }
 	message.SetBody("text/html", body)
 
-	fmt.Println(body)
-	// if err := m.Con.DialAndSend(message); err != nil {
-	// 	return fmt.Errorf("failed to send mail: %w", err)
-	// }
+	if err := m.Con.DialAndSend(message); err != nil {
+		return fmt.Errorf("failed to send mail: %w", err)
+	}
 
 	return nil
 }

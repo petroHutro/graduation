@@ -44,7 +44,6 @@ func Connect(conf *config.ObjectStorage) (*Storage, error) {
 }
 
 func (s *Storage) creatBucket() error {
-	fmt.Println(s.bucketName)
 	exists, err := s.client.BucketExists(context.Background(), s.bucketName)
 	if err != nil {
 		return fmt.Errorf("cannot exists: %w", err)

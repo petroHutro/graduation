@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-//go:generate mockgen -source=storage.go -destination=mock/mock.go -package=storage
+//go:generate mockgen -source=storage.go -destination=mock/mock.go
 
 type Storage interface {
 	SetUser(ctx context.Context, login, password, mail string) (int, error)
@@ -24,6 +24,7 @@ type Storage interface {
 	CreateEvent(ctx context.Context, e *entity.Event) error
 	CloseEvent(ctx context.Context, userID, eventID int) error
 	SendMessage(ctx context.Context, date time.Time, send func(mail, body string, urls []string) error) error
+	EventsToday(ctx context.Context, date time.Time) error
 }
 
 type storageData struct {

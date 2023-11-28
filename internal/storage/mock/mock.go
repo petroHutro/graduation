@@ -3,7 +3,6 @@
 
 // Package storage is a generated GoMock package.
 package mock
-
 import (
 	context "context"
 	entity "graduation/internal/entity"
@@ -104,6 +103,20 @@ func (m *MockStorage) DellEventUser(ctx context.Context, eventID, userID int) er
 func (mr *MockStorageMockRecorder) DellEventUser(ctx, eventID, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DellEventUser", reflect.TypeOf((*MockStorage)(nil).DellEventUser), ctx, eventID, userID)
+}
+
+// EventsToday mocks base method.
+func (m *MockStorage) EventsToday(ctx context.Context, date time.Time) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EventsToday", ctx, date)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EventsToday indicates an expected call of EventsToday.
+func (mr *MockStorageMockRecorder) EventsToday(ctx, date interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventsToday", reflect.TypeOf((*MockStorage)(nil).EventsToday), ctx, date)
 }
 
 // GetEvent mocks base method.
