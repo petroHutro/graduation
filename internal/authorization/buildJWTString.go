@@ -8,7 +8,6 @@ import (
 )
 
 func BuildJWTString(secretKey string, tokenEXP time.Duration, id int) (string, error) {
-	// id := utils.GenerateString()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenEXP)),

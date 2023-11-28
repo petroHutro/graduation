@@ -1,11 +1,5 @@
 package mail
 
-// pnkofqqiobcynulu
-
-// адрес почтового сервера — smtp.yandex.ru;
-// защита соединения — SSL;
-// порт — 465;
-
 import (
 	"fmt"
 	"graduation/internal/config"

@@ -13,5 +13,4 @@ type Event struct {
 	Date            time.Time
 	Active          bool
 	Images          []Image
-	// PhotoURLs       []string
 }

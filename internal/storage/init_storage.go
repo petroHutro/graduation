@@ -53,7 +53,7 @@ func InitStorage(conf *config.Storage) (Storage, error) {
 		return nil, err
 	}
 
-	err = goose.Up(st.db, "/Users/petro/GoProjects/graduation/internal/migration") //!!!!!!!!!!!!!!!!!
+	err = goose.Up(st.db, "./internal/migration")
 	if err != nil && err != goose.ErrNoNextVersion {
 		return nil, err
 	}

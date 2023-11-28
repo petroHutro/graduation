@@ -60,15 +60,6 @@ func (s *Storage) creatBucket() error {
 }
 
 func (s *Storage) Set(objectName string, fileContent []byte) error {
-	// func (s *Storage) Set(objectName, filePath, contentType string) error {
-	// _, err := s.Client.FPutObject(
-	// 	context.Background(),
-	// 	bucketName,
-	// 	objectName,
-	// 	filePath,
-	// 	minio.PutObjectOptions{ContentType: contentType},
-	// )
-
 	_, err := s.client.PutObject(
 		context.Background(),
 		s.bucketName,
