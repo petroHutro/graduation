@@ -160,7 +160,7 @@ func (s *storageData) GetUserEvents(ctx context.Context, userID int) ([]entity.E
 		WHERE record.user_id = $1
 		ORDER BY event.date
 	`, userID)
-	if err != nil {
+	if err != nil || rowsE.Err() != nil {
 		return nil, fmt.Errorf("cannot get events: %w", err)
 	}
 	defer rowsE.Close()
