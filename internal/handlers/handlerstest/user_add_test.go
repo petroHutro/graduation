@@ -38,7 +38,7 @@ POST /api/user/add #1
 correct inputID, headerID
 got status 200
 			`,
-			inputID:      `XA==`,
+			inputID:      `MQ==`,
 			headerID:     "1",
 			inputEventID: 1,
 			inputUserID:  1,
@@ -64,7 +64,7 @@ POST /api/user/add #3
 not correct return AddEventUser
 got status 400
 			`,
-			inputID:      `XA==`,
+			inputID:      `MQ==`,
 			headerID:     "1",
 			inputEventID: 1,
 			inputUserID:  1,
@@ -79,7 +79,7 @@ POST /api/user/add #4
 not correct return AddEventUser (event not exist)
 got status 404
 			`,
-			inputID:      `XA==`,
+			inputID:      `MQ==`,
 			headerID:     "1",
 			inputEventID: 1,
 			inputUserID:  1,
@@ -94,7 +94,7 @@ POST /api/user/add #5
 not correct return AddEventUser (user already add event)
 got status 409
 			`,
-			inputID:      `XA==`,
+			inputID:      `MQ==`,
 			headerID:     "1",
 			inputEventID: 1,
 			inputUserID:  1,
@@ -109,7 +109,7 @@ POST /api/user/add #6
 not correct headerID
 got status 400
 			`,
-			inputID:            `XA==`,
+			inputID:            `MQ==`,
 			headerID:           "",
 			mockBehavior:       func(r *mock.MockStorage, ctx context.Context, eventID, userID int) {},
 			expectedStatusCode: 400,

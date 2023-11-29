@@ -70,7 +70,7 @@ got status 200
 					}, nil)
 			},
 			expectedStatusCode:   200,
-			expectedResponseBody: `[{"id":"XA==","title":"Title_1","description":"Description_1","place":"Place_1","participants":0,"max_participants":1,"data":"2023-11-28T00:01:00Z","active":true,"photo":null},{"id":"Xw==","title":"Title_2","description":"Description_2","place":"Place_2","participants":0,"max_participants":1,"data":"2023-11-28T00:01:00Z","active":true,"photo":null}]`,
+			expectedResponseBody: `[{"id":"MQ==","title":"Title_1","description":"Description_1","place":"Place_1","participants":0,"max_participants":1,"data":"2023-11-28T00:01:00Z","active":true,"photo":null},{"id":"Mg==","title":"Title_2","description":"Description_2","place":"Place_2","participants":0,"max_participants":1,"data":"2023-11-28T00:01:00Z","active":true,"photo":null}]`,
 		},
 		{
 			name: `

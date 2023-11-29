@@ -38,7 +38,7 @@ POST /api/event #1
 correct inputID
 got status 200
 			`,
-			inputID:      `XA==`,
+			inputID:      `MQ==`,
 			inputEventID: 1,
 			mockBehavior: func(r *mock.MockStorage, ctx context.Context, eventID int) {
 				r.EXPECT().GetEvent(ctx, eventID).Return(&entity.Event{
@@ -55,7 +55,7 @@ got status 200
 				}, nil)
 			},
 			expectedStatusCode:   200,
-			expectedResponseBody: `{"id":"XA==","title":"Title","description":"Description","place":"Place","participants":0,"max_participants":1,"data":"2023-11-28T00:01:00Z","active":true,"photo":null}`,
+			expectedResponseBody: `{"id":"MQ==","title":"Title","description":"Description","place":"Place","participants":0,"max_participants":1,"data":"2023-11-28T00:01:00Z","active":true,"photo":null}`,
 		},
 		{
 			name: `
@@ -73,7 +73,7 @@ POST /api/event #3
 not correct return GetEvent
 got status 404
 			`,
-			inputID:      `XA==`,
+			inputID:      `MQ==`,
 			inputEventID: 1,
 			mockBehavior: func(r *mock.MockStorage, ctx context.Context, eventID int) {
 				r.EXPECT().GetEvent(ctx, eventID).Return(nil, errors.New("err"))

@@ -63,7 +63,7 @@ got status 200
 				r.EXPECT().CreateEvent(ctx, e).Return(nil)
 			},
 			expectedStatusCode:   200,
-			expectedResponseBody: "XQ==",
+			expectedResponseBody: "MA==",
 		},
 		{
 			name: `

@@ -39,7 +39,7 @@ func TestHandlerEventsGet(t *testing.T) {
 	}{
 		{
 			name: `
-GET /api/event #1 
+GET /api/events #1 
 correct inputID
 got status 200
 			`,
@@ -83,11 +83,11 @@ got status 200
 					}, 1, nil)
 			},
 			expectedStatusCode:   200,
-			expectedResponseBody: `{"page":1,"pages":1,"events":[{"id":"XA==","title":"Title_1","description":"Description_1","place":"Place_1","participants":0,"max_participants":1,"data":"2023-11-28T00:01:00Z","active":true,"photo":null},{"id":"Xw==","title":"Title_2","description":"Description_2","place":"Place_2","participants":0,"max_participants":1,"data":"2023-11-28T00:01:00Z","active":true,"photo":null}]}`,
+			expectedResponseBody: `{"page":1,"pages":1,"events":[{"id":"MQ==","title":"Title_1","description":"Description_1","place":"Place_1","participants":0,"max_participants":1,"data":"2023-11-28T00:01:00Z","active":true,"photo":null},{"id":"Mg==","title":"Title_2","description":"Description_2","place":"Place_2","participants":0,"max_participants":1,"data":"2023-11-28T00:01:00Z","active":true,"photo":null}]}`,
 		},
 		{
 			name: `
-GET /api/event #2
+GET /api/events #2
 not correct inputID
 got status 400
 			`,
@@ -97,7 +97,7 @@ got status 400
 		},
 		{
 			name: `
-GET /api/event #3
+GET /api/events #3
 not correct return GetEvents
 got status 404
 			`,
