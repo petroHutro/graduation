@@ -3,17 +3,23 @@ package app
 import (
 	"fmt"
 	"graduation/internal/config"
+	"graduation/internal/handlers"
 	"graduation/internal/logger"
+	"graduation/internal/notification"
 	"graduation/internal/router"
 	"graduation/internal/storage"
+	"graduation/internal/ticket"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type App struct {
-	storage storage.Storage
-	conf    *config.Flags
-	router  *chi.Mux
+	storage      storage.Storage
+	conf         *config.Flags
+	router       *chi.Mux
+	tick         *ticket.TicketToken
+	handler      *handlers.Handler
+	notification *notification.Notification
 }
 
 func newApp() (*App, error) {
@@ -31,7 +37,22 @@ func newApp() (*App, error) {
 		return nil, fmt.Errorf("cannot init storage: %w", err)
 	}
 
+	tick := ticket.Init(&conf.TicketKey)
+
 	router := router.CreateRouter()
+
+	handler := handlers.Init(storage, tick, conf.TokenSecretKey, conf.TokenEXP)
+
+	notification := notification.Init(storage, &conf.SMTP)
+
 	logger.Info("Running server: address:%s port:%d", conf.Host, conf.Port)
-	return &App{conf: conf, router: router, storage: storage}, nil
+
+	return &App{
+		conf:         conf,
+		router:       router,
+		storage:      storage,
+		tick:         tick,
+		handler:      handler,
+		notification: notification,
+	}, nil
 }

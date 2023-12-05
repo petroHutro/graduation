@@ -64,8 +64,10 @@ got status 404
 			repo := mock.NewMockStorage(c)
 			test.mockBehavior(repo, context.Background(), test.inputFilename)
 
+			h := handlers.Init(repo, nil, "", 0)
+
 			handler := func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerImage(w, r, repo)
+				h.Image(w, r)
 			}
 
 			req, err := http.NewRequest("GET", "/api/images/"+test.inputFilename, nil)

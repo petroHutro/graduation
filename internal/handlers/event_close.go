@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func HandlerEventClose(w http.ResponseWriter, r *http.Request, st storage.Storage) {
+func (h *Handler) EventClose(w http.ResponseWriter, r *http.Request) {
 	eventID, err := encoding.DecodeID(r.URL.String()[17:])
 	if err != nil {
 		logger.Error("cannot get id from url: %v", err)
@@ -24,7 +24,7 @@ func HandlerEventClose(w http.ResponseWriter, r *http.Request, st storage.Storag
 		return
 	}
 
-	if err := st.CloseEvent(r.Context(), userID, eventID); err != nil {
+	if err := h.storage.CloseEvent(r.Context(), userID, eventID); err != nil {
 		var repErr *storage.RepError
 		if errors.As(err, &repErr) {
 			if repErr.UniqueViolation {

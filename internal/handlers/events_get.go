@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"graduation/internal/encoding"
 	"graduation/internal/logger"
-	"graduation/internal/storage"
 	"net/http"
 	"time"
 )
@@ -66,7 +65,7 @@ func intDataEventsGet() *DataEventsGet {
 	return &data
 }
 
-func HandlerEventsGet(w http.ResponseWriter, r *http.Request, st storage.Storage) {
+func (h *Handler) EventsGet(w http.ResponseWriter, r *http.Request) {
 	data := intDataEventsGet()
 
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
@@ -75,7 +74,7 @@ func HandlerEventsGet(w http.ResponseWriter, r *http.Request, st storage.Storage
 		return
 	}
 
-	events, pages, err := st.GetEvents(r.Context(), time.Time(data.From), time.Time(data.To), data.Limit, data.Page)
+	events, pages, err := h.storage.GetEvents(r.Context(), time.Time(data.From), time.Time(data.To), data.Limit, data.Page)
 	if err != nil {
 		logger.Error("cannot get events: %v", err)
 		w.WriteHeader(http.StatusNotFound)

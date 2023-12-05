@@ -30,6 +30,10 @@ func NewFlags() Flags {
 				TokenEXP: time.Hour * 3,
 			},
 		},
+
+		TicketKey: TicketKey{
+			TicketSecretKey: "",
+		},
 	}
 }
 

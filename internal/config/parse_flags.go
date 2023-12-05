@@ -15,6 +15,8 @@ func parseFlags() *Flags {
 
 	flag.StringVar(&flags.DatabaseDSN, "d", "host=localhost user=url password=1234 dbname=dbbot sslmode=disable", "DatabaseDSN")
 
+	flag.StringVar(&flags.TicketSecretKey, "s", "supersecretkey", "secret key for ticket token")
+
 	flag.BoolVar(&flags.Logger.LoggerFileFlag, "l", false, "Logger only file")
 	flag.BoolVar(&flags.Logger.LoggerMultiFlag, "L", false, "Logger Multi")
 

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"graduation/internal/entity"
@@ -207,15 +208,23 @@ func (s *storageData) DellEvent(ctx context.Context, userID, eventID int) error 
 		return fmt.Errorf("event not for user: %w", err)
 	}
 
-	if err := s.dellPhoto(ctx, eventID); err != nil {
-		return fmt.Errorf("cannot dell photo: %w", err)
-	}
+	err = s.inTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
+		if err := s.dellPhoto(ctx, eventID); err != nil {
+			return fmt.Errorf("cannot dell photo: %w", err)
+		}
 
-	_, err = s.db.ExecContext(ctx, `
-		DELETE FROM event WHERE id = $1
-	`, eventID)
+		_, err = tx.ExecContext(ctx, `
+			DELETE FROM event WHERE id = $1
+		`, eventID)
+		if err != nil {
+			return fmt.Errorf("cannot dell event: %w", err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return fmt.Errorf("cannot dell event: %w", err)
+		return fmt.Errorf("cannot dell: %w", err)
 	}
 
 	return nil

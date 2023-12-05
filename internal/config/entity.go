@@ -46,6 +46,10 @@ type Token struct {
 	TokenSecretKey string
 }
 
+type TicketKey struct {
+	TicketSecretKey string
+}
+
 type SMTP struct {
 	SMTPServer   string `json:"smtpServer"`
 	SMTPUsername string `json:"smtpUsername"`
@@ -60,6 +64,7 @@ type Flags struct {
 	Storage
 	Token
 	SMTP
+	TicketKey
 }
 
 func (a NetAddress) String() string {

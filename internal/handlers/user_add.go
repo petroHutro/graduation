@@ -3,13 +3,14 @@ package handlers
 import (
 	"errors"
 	"graduation/internal/encoding"
+	"graduation/internal/entity"
 	"graduation/internal/logger"
 	"graduation/internal/storage"
 	"net/http"
 	"strconv"
 )
 
-func HandlerUserAdd(w http.ResponseWriter, r *http.Request, st storage.Storage) {
+func (h *Handler) UserAdd(w http.ResponseWriter, r *http.Request) {
 	eventID, err := encoding.DecodeID(r.URL.String()[14:])
 	if err != nil {
 		logger.Error("cannot get eventID from url: %v", err)
@@ -24,7 +25,19 @@ func HandlerUserAdd(w http.ResponseWriter, r *http.Request, st storage.Storage) 
 		return
 	}
 
-	if err := st.AddEventUser(r.Context(), eventID, userID); err != nil {
+	ticket := entity.Ticket{
+		UserID:  userID,
+		EventID: eventID,
+		Exp:     10,
+	}
+
+	if err := h.tick.Generate(&ticket); err != nil {
+		logger.Error("cannot creat ticket: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err := h.storage.AddEventUser(r.Context(), &ticket); err != nil {
 		var repErr *storage.RepError
 		if errors.As(err, &repErr) {
 			if repErr.UniqueViolation {
@@ -42,4 +55,7 @@ func HandlerUserAdd(w http.ResponseWriter, r *http.Request, st storage.Storage) 
 	}
 
 	w.WriteHeader(http.StatusOK)
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(ticket.Token))
 }

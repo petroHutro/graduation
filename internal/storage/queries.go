@@ -35,6 +35,30 @@ func (s *storageData) inTransaction(ctx context.Context, f func(ctx context.Cont
 	return nil
 }
 
+func (s *storageData) UserTickets(ctx context.Context, userID int) ([]entity.Ticket, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT token, event_id, active
+		FROM ticket
+		WHERE user_id = $1
+	`, userID)
+	if err != nil || rows.Err() != nil {
+		return nil, fmt.Errorf("cannot get record: %w", err)
+	}
+	defer rows.Close()
+
+	var tickets []entity.Ticket
+	for rows.Next() {
+		var ticket entity.Ticket
+		err := rows.Scan(&ticket.Token, &ticket.EventID, &ticket.Status)
+		if err != nil {
+			return nil, fmt.Errorf("cannot scan: %w", err)
+		}
+		tickets = append(tickets, ticket)
+	}
+
+	return tickets, nil
+}
+
 func (s *storageData) GetImage(ctx context.Context, filename string) (string, error) {
 	url, err := s.ost.Get(filename)
 	if err != nil {
@@ -49,13 +73,19 @@ func (s *storageData) EventsToday(ctx context.Context, date time.Time) error {
 		return fmt.Errorf("cannot get events today: %w", err)
 	}
 
+	stmt, err := s.db.PrepareContext(ctx, `
+		INSERT INTO today (event_id, user_id, date)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (event_id, user_id) DO NOTHING;
+	`)
+	if err != nil {
+		return fmt.Errorf("cannot creat Prepare: %w", err)
+	}
+	defer stmt.Close()
+
 	for _, event := range events {
 		for _, user := range event.UserID {
-			_, err = s.db.ExecContext(ctx, `
-				INSERT INTO today (event_id, user_id, date)
-				VALUES ($1, $2, $3)
-				ON CONFLICT (event_id, user_id) DO NOTHING;
-			`, event.ID, user, event.Date)
+			_, err := stmt.ExecContext(ctx, event.ID, user, event.Date)
 			if err != nil {
 				return fmt.Errorf("cannot set: %w", err)
 			}
@@ -69,26 +99,14 @@ func (s *storageData) EventsToday(ctx context.Context, date time.Time) error {
 	return nil
 }
 
-func (s *storageData) SendMessage(ctx context.Context, date time.Time, send func(mail, body string, urls []string) error) error {
-	messages, err := s.getMessage(ctx, date)
-	if err != nil {
-		return fmt.Errorf("cannot get message: %w", err)
-	}
-
-	for _, message := range messages {
-		err := send(message.Mail, message.Body, message.Urls)
-		if err != nil {
-			return fmt.Errorf("cannot send message: %w", err)
-		}
-
-		_, err = s.db.ExecContext(ctx, `
+func (s *storageData) MessageUpdate(ctx context.Context, eventID, userID int) error {
+	_, err := s.db.ExecContext(ctx, `
 			UPDATE today
 				SET send = true
 				WHERE event_id = $1 AND user_id = $2
-		`, message.EventID, message.UserID)
-		if err != nil {
-			return fmt.Errorf("cannot update today: %w", err)
-		}
+		`, eventID, userID)
+	if err != nil {
+		return fmt.Errorf("cannot update today: %w", err)
 	}
 
 	return nil
@@ -112,6 +130,16 @@ func (s *storageData) getEventsToday(ctx context.Context, date time.Time) ([]Eve
 	}
 	defer rowsEvent.Close()
 
+	stmt, err := s.db.PrepareContext(ctx, `
+		SELECT user_id
+		FROM record
+		WHERE event_id = $1
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("cannot creat Prepare: %w", err)
+	}
+	defer stmt.Close()
+
 	var today []EventUsers
 	for rowsEvent.Next() {
 		var eventDate time.Time
@@ -121,11 +149,7 @@ func (s *storageData) getEventsToday(ctx context.Context, date time.Time) ([]Eve
 			return nil, fmt.Errorf("cannot scan: %w", err)
 		}
 
-		rowsUser, err := s.db.QueryContext(ctx, `
-			SELECT user_id
-			FROM record
-			WHERE event_id = $1
-		`, eventID)
+		rowsUser, err := stmt.QueryContext(ctx, eventID)
 		if err != nil || rowsUser.Err() != nil {
 			return nil, fmt.Errorf("cannot get record: %w", err)
 		}
@@ -133,12 +157,12 @@ func (s *storageData) getEventsToday(ctx context.Context, date time.Time) ([]Eve
 
 		var users []int
 		for rowsUser.Next() {
-			var UserID int
-			err := rowsUser.Scan(&UserID)
+			var userID int
+			err := rowsUser.Scan(&userID)
 			if err != nil {
 				return nil, fmt.Errorf("cannot scan: %w", err)
 			}
-			users = append(users, UserID)
+			users = append(users, userID)
 		}
 		today = append(today, EventUsers{ID: eventID, Date: eventDate, UserID: users})
 	}
@@ -159,8 +183,9 @@ func (s *storageData) dellEventToday(ctx context.Context, date time.Time) error 
 	return nil
 }
 
-func (s *storageData) getUserToday(ctx context.Context, date time.Time) (map[int]int, error) {
+func (s *storageData) getUserToday(ctx context.Context, date time.Time) ([]entity.Message, error) {
 	formattedTime := date.Format("2006-01-02 15:04:05")
+
 	rowsEvent, err := s.db.QueryContext(ctx, `
 		SELECT event_id, user_id
 		FROM today
@@ -173,33 +198,44 @@ func (s *storageData) getUserToday(ctx context.Context, date time.Time) (map[int
 	}
 	defer rowsEvent.Close()
 
-	userEvent := make(map[int]int)
+	uniqueEvent := make(map[int]bool)
+	var messages []entity.Message
 	for rowsEvent.Next() {
 		var userID, eventID int
-		err := rowsEvent.Scan(&userID, &eventID)
+		err := rowsEvent.Scan(&eventID, &userID)
 		if err != nil {
 			return nil, fmt.Errorf("cannot scan: %w", err)
 		}
-		userEvent[userID] = eventID
+
+		if _, exists := uniqueEvent[eventID]; !exists {
+			message := entity.Message{
+				EventID: eventID,
+			}
+			uniqueEvent[eventID] = true
+			messages = append(messages, message)
+		}
+
+		for i := range messages {
+			if messages[i].EventID == eventID {
+				messageTo := entity.MessageTo{
+					UserID: userID,
+				}
+				messages[i].Users = append(messages[i].Users, messageTo)
+			}
+		}
 	}
 
-	return userEvent, nil
+	return messages, nil
 }
 
-func (s *storageData) getMessage(ctx context.Context, date time.Time) ([]entity.Message, error) {
-	userEvent, err := s.getUserToday(ctx, date)
+func (s *storageData) GetMessages(ctx context.Context, date time.Time) ([]entity.Message, error) {
+	messages, err := s.getUserToday(ctx, date)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get user today: %w", err)
 	}
 
-	var messages []entity.Message
-	for eventID, userID := range userEvent {
-		mail, err := s.getMail(ctx, userID)
-		if err != nil {
-			return nil, fmt.Errorf("cannot get mail: %w", err)
-		}
-
-		event, err := s.GetEvent(ctx, eventID)
+	for index, message := range messages {
+		event, err := s.GetEvent(ctx, message.EventID)
 		if err != nil {
 			return nil, fmt.Errorf("cannot get event: %w", err)
 		}
@@ -219,25 +255,28 @@ func (s *storageData) getMessage(ctx context.Context, date time.Time) ([]entity.
 			return nil, fmt.Errorf("cannot get body: %w", err)
 		}
 
-		messages = append(messages, entity.Message{
-			EventID: eventID,
-			UserID:  userID,
-			Mail:    mail,
-			Body:    body,
-			Urls:    urls})
+		for index, user := range message.Users {
+			mail, err := s.getMail(ctx, user.UserID)
+			if err != nil {
+				return nil, fmt.Errorf("cannot get mail: %w", err)
+			}
+			message.Users[index].Mail = mail
+		}
+
+		messages[index].Body = body
+		messages[index].Urls = urls
 	}
 
 	return messages, nil
 }
 
 func (s *storageData) getMail(ctx context.Context, userID int) (string, error) {
-	row := s.db.QueryRowContext(ctx, `
+	var mail string
+	err := s.db.QueryRowContext(ctx, `
 		SELECT mail 
 		FROM users WHERE id = $1;
-	`, userID)
+	`, userID).Scan(&mail)
 
-	var mail string
-	err := row.Scan(&mail)
 	if err != nil {
 		return "", fmt.Errorf("cannot scan: %w", err)
 	}

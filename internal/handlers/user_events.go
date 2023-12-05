@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"graduation/internal/encoding"
 	"graduation/internal/logger"
-	"graduation/internal/storage"
 	"net/http"
 	"strconv"
 )
 
-func HandlerUserEvents(w http.ResponseWriter, r *http.Request, st storage.Storage) {
+func (h *Handler) UserEvents(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.Atoi(r.Header.Get("User_id"))
 	if err != nil {
 		logger.Error("cannot get user id: %v", err)
@@ -17,7 +16,7 @@ func HandlerUserEvents(w http.ResponseWriter, r *http.Request, st storage.Storag
 		return
 	}
 
-	events, err := st.GetUserEvents(r.Context(), userID)
+	events, err := h.storage.GetUserEvents(r.Context(), userID)
 	if err != nil {
 		logger.Error("cannot get events: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -40,7 +39,7 @@ func HandlerUserEvents(w http.ResponseWriter, r *http.Request, st storage.Storag
 		}
 	}
 
-	respEvent, err := json.Marshal(dataResp)
+	respEvents, err := json.Marshal(dataResp)
 	if err != nil {
 		logger.Error("cannot json to byte: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -50,5 +49,5 @@ func HandlerUserEvents(w http.ResponseWriter, r *http.Request, st storage.Storag
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 
-	w.Write(respEvent)
+	w.Write(respEvents)
 }

@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"graduation/internal/logger"
-	"graduation/internal/storage"
 	"net/http"
 	"time"
 
@@ -22,7 +21,7 @@ type RespEvent struct {
 	Photo           []string  `json:"photo"`
 }
 
-func HandlerEventGet(w http.ResponseWriter, r *http.Request, st storage.Storage) {
+func (h *Handler) EventGet(w http.ResponseWriter, r *http.Request) {
 	eventID, err := encoding.DecodeID(r.URL.String()[11:])
 	if err != nil {
 		logger.Error("cannot get id from url: %v", err)
@@ -30,7 +29,7 @@ func HandlerEventGet(w http.ResponseWriter, r *http.Request, st storage.Storage)
 		return
 	}
 
-	event, err := st.GetEvent(r.Context(), eventID)
+	event, err := h.storage.GetEvent(r.Context(), eventID)
 	if err != nil {
 		logger.Error("cannot get event: %v", err)
 		w.WriteHeader(http.StatusNotFound)

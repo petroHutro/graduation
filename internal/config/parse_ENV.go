@@ -20,4 +20,7 @@ func parseENV(flags *Flags) {
 	if databaseDSN := os.Getenv("DATABASE_DSN"); databaseDSN != "" {
 		flags.DatabaseDSN = databaseDSN
 	}
+	if tiketSecretKey := os.Getenv("SECRET_KEY_TICKET"); tiketSecretKey != "" {
+		flags.TicketSecretKey = tiketSecretKey
+	}
 }

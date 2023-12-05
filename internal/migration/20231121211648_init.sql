@@ -39,6 +39,16 @@ CREATE TABLE IF NOT EXISTS today (
 	UNIQUE 		(event_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS ticket (
+	id 			SERIAL PRIMARY KEY,
+	token		TEXT NOT NULL,
+	event_id	INT REFERENCES event(id) ON DELETE CASCADE,
+	user_id		INT REFERENCES users(id) ON DELETE CASCADE,
+	date 		timestamp,
+	active 		BOOLEAN DEFAULT TRUE,
+	UNIQUE 		(event_id, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS photo (
 	id 			SERIAL PRIMARY KEY,
 	event_id	INT REFERENCES event(id) ON DELETE CASCADE,

@@ -82,8 +82,10 @@ got status 401
 			repo := mock.NewMockStorage(c)
 			test.mockBehavior(repo, context.Background(), test.inputLogin, test.inputPassword)
 
+			h := handlers.Init(repo, nil, "your_secret_key", time.Hour)
+
 			handler := func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerLogin(w, r, repo, "your_secret_key", time.Hour)
+				h.Login(w, r)
 			}
 
 			req, err := http.NewRequest("POST", "/api/user/login", strings.NewReader(test.inputBody))

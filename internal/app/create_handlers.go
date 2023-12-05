@@ -3,7 +3,6 @@ package app
 import (
 	"graduation/internal/authorization"
 	"graduation/internal/compression"
-	"graduation/internal/handlers"
 	"graduation/internal/logger"
 	"net/http"
 
@@ -19,60 +18,70 @@ func (a *App) createHandlers() {
 	a.router.Route("/api/event", func(r chi.Router) {
 		r.With(authorization.AuthorizationMiddleware(a.conf.TokenSecretKey)).
 			Post("/creat", func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerEventCreat(w, r, a.storage)
+				a.handler.EventCreat(w, r)
 			})
 
 		r.With(authorization.AuthorizationMiddleware(a.conf.TokenSecretKey)).
 			Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerEventGet(w, r, a.storage)
+				a.handler.EventGet(w, r)
 			})
 
 		r.With(authorization.AuthorizationMiddleware(a.conf.TokenSecretKey)).
 			Post("/dell/{id}", func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerEventDell(w, r, a.storage)
+				a.handler.EventDell(w, r)
 			})
 
 		r.With(authorization.AuthorizationMiddleware(a.conf.TokenSecretKey)).
 			Post("/close/{id}", func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerEventClose(w, r, a.storage)
+				a.handler.EventClose(w, r)
+			})
+
+		r.With(authorization.AuthorizationMiddleware(a.conf.TokenSecretKey)).
+			Get("/valid/{id}", func(w http.ResponseWriter, r *http.Request) {
+				a.handler.ValidTicket(w, r)
 			})
 	})
 
 	a.router.Route("/api", func(r chi.Router) {
 		r.With(authorization.AuthorizationMiddleware(a.conf.TokenSecretKey)).
 			Get("/events", func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerEventsGet(w, r, a.storage)
+				a.handler.EventsGet(w, r)
 			})
 	})
 
 	a.router.Route("/api/user", func(r chi.Router) {
 		r.Post("/register", func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandlerRegister(w, r, a.storage, a.conf.TokenSecretKey, a.conf.TokenEXP)
+			a.handler.Register(w, r)
 		})
 
 		r.Post("/login", func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandlerLogin(w, r, a.storage, a.conf.TokenSecretKey, a.conf.TokenEXP)
+			a.handler.Login(w, r)
 		})
 
 		r.With(authorization.AuthorizationMiddleware(a.conf.TokenSecretKey)).
 			Post("/add/{id}", func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerUserAdd(w, r, a.storage)
+				a.handler.UserAdd(w, r)
 			})
 
 		r.With(authorization.AuthorizationMiddleware(a.conf.TokenSecretKey)).
 			Post("/dell/{id}", func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerUserDell(w, r, a.storage)
+				a.handler.UserDell(w, r)
 			})
 
 		r.With(authorization.AuthorizationMiddleware(a.conf.TokenSecretKey)).
 			Get("/events", func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerUserEvents(w, r, a.storage)
+				a.handler.UserEvents(w, r)
+			})
+
+		r.With(authorization.AuthorizationMiddleware(a.conf.TokenSecretKey)).
+			Get("/tickets", func(w http.ResponseWriter, r *http.Request) {
+				a.handler.UserTickets(w, r)
 			})
 	})
 
 	a.router.Route("/api/images", func(r chi.Router) {
 		r.Get("/{filename}", func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandlerImage(w, r, a.storage)
+			a.handler.Image(w, r)
 		})
 	})
 }

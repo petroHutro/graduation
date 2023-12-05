@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func HandlerUserDell(w http.ResponseWriter, r *http.Request, st storage.Storage) {
+func (h *Handler) UserDell(w http.ResponseWriter, r *http.Request) {
 	eventID, err := encoding.DecodeID(r.URL.String()[15:])
 	if err != nil {
 		logger.Error("cannot get eventID from url: %v", err)
@@ -24,7 +24,7 @@ func HandlerUserDell(w http.ResponseWriter, r *http.Request, st storage.Storage)
 		return
 	}
 
-	if err := st.DellEventUser(r.Context(), eventID, userID); err != nil {
+	if err := h.storage.DellEventUser(r.Context(), eventID, userID); err != nil {
 		var repErr *storage.RepError
 		if errors.As(err, &repErr) {
 			if repErr.UniqueViolation {

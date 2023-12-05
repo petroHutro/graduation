@@ -106,8 +106,10 @@ got status 409
 			repo := mock.NewMockStorage(c)
 			test.mockBehavior(repo, context.Background(), test.inputLogin, test.inputPassword, test.inputmail)
 
+			h := handlers.Init(repo, nil, "your_secret_key", time.Hour)
+
 			handler := func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerRegister(w, r, repo, "your_secret_key", time.Hour)
+				h.Register(w, r)
 			}
 
 			req, err := http.NewRequest("POST", "/api/user/register", strings.NewReader(test.inputBody))

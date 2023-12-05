@@ -127,8 +127,10 @@ got status 404
 			repo := mock.NewMockStorage(c)
 			test.mockBehavior(repo, context.Background(), test.from, test.to, test.limit, test.page)
 
+			h := handlers.Init(repo, nil, "", 0)
+
 			handler := func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerEventsGet(w, r, repo)
+				h.EventsGet(w, r)
 			}
 
 			req, err := http.NewRequest("GET", "/api/events", strings.NewReader(test.inputBody))

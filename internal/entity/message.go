@@ -1,9 +1,13 @@
 package entity
 
+type MessageTo struct {
+	UserID int
+	Mail   string
+}
+
 type Message struct {
-	UserID  int
+	Users   []MessageTo
 	EventID int
-	Mail    string
 	Body    string
 	Urls    []string
 }

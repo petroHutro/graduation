@@ -27,7 +27,7 @@ func setAuthorization(secretKey string, tokenEXP time.Duration, id int) (*http.C
 	return &cookie, nil
 }
 
-func HandlerRegister(w http.ResponseWriter, r *http.Request, st storage.Storage, secretKey string, tokenEXP time.Duration) {
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var data DataRegister
 
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
@@ -36,7 +36,7 @@ func HandlerRegister(w http.ResponseWriter, r *http.Request, st storage.Storage,
 		return
 	}
 
-	userID, err := st.SetUser(r.Context(), data.Login, data.Password, data.Mail)
+	userID, err := h.storage.SetUser(r.Context(), data.Login, data.Password, data.Mail)
 	if err != nil {
 		var repErr *storage.RepError
 		if errors.As(err, &repErr) && repErr.Repetition {
@@ -49,7 +49,7 @@ func HandlerRegister(w http.ResponseWriter, r *http.Request, st storage.Storage,
 		return
 	}
 
-	token, err := setAuthorization(secretKey, tokenEXP, userID)
+	token, err := setAuthorization(h.tokenSecretKey, h.tokenEXP, userID)
 	if err != nil {
 		logger.Error("cannot get token: %v", err)
 		w.WriteHeader(http.StatusBadRequest)

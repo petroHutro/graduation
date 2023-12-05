@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"graduation/internal/logger"
-	"graduation/internal/notification"
 	"net/http"
 	"strconv"
 )
@@ -18,7 +17,7 @@ func Run() error {
 	app.createMiddlewareHandlers()
 	app.createHandlers()
 
-	go notification.LoopNotification(app.storage, &app.conf.SMTP)
+	go app.notification.LoopNotification()
 
 	address := app.conf.Host + ":" + strconv.Itoa(app.conf.Port)
 

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"graduation/internal/entity"
 	"graduation/internal/logger"
-	"graduation/internal/storage"
 	"graduation/internal/utils"
 	"net/http"
 	"strconv"
@@ -28,7 +27,7 @@ type DataEventCreat struct {
 	Photo        []Photo `json:"photo"`
 }
 
-func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st storage.Storage) {
+func (h *Handler) EventCreat(w http.ResponseWriter, r *http.Request) {
 	var data DataEventCreat
 
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
@@ -69,7 +68,7 @@ func HandlerEventCreat(w http.ResponseWriter, r *http.Request, st storage.Storag
 		})
 	}
 
-	if err := st.CreateEvent(r.Context(), &event); err != nil {
+	if err := h.storage.CreateEvent(r.Context(), &event); err != nil {
 		logger.Error("cannot creat event: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return

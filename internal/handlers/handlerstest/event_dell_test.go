@@ -124,8 +124,10 @@ got status 400
 			repo := mock.NewMockStorage(c)
 			test.mockBehavior(repo, context.Background(), test.inputUserID, test.inputEventID)
 
+			h := handlers.Init(repo, nil, "", 0)
+
 			handler := func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerEventDell(w, r, repo)
+				h.EventDell(w, r)
 			}
 
 			req, err := http.NewRequest("POST", "/api/event/dell/"+test.inputID, nil)

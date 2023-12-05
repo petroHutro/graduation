@@ -9,14 +9,15 @@ import (
 	"time"
 )
 
-//go:generate mockgen -source=storage.go -destination=mock/mock.go
+//go:generate mockgen -source=storage.go -destination=mock/mock.go -package=mock
 
 type UserStorage interface {
 	SetUser(ctx context.Context, login, password, mail string) (int, error)
 	GetUser(ctx context.Context, login, password string) (int, error)
-	AddEventUser(ctx context.Context, eventID, userID int) error
+	AddEventUser(ctx context.Context, tick *entity.Ticket) error
 	DellEventUser(ctx context.Context, eventID, userID int) error
 	GetUserEvents(ctx context.Context, userID int) ([]entity.Event, error)
+	UserTickets(ctx context.Context, userID int) ([]entity.Ticket, error)
 }
 
 type EventStorage interface {
@@ -29,7 +30,8 @@ type EventStorage interface {
 }
 
 type NotificationStorage interface {
-	SendMessage(ctx context.Context, date time.Time, send func(mail, body string, urls []string) error) error
+	GetMessages(ctx context.Context, date time.Time) ([]entity.Message, error)
+	MessageUpdate(ctx context.Context, eventID, userID int) error
 	EventsToday(ctx context.Context, date time.Time) error
 }
 

@@ -34,7 +34,7 @@ func TestHandlerUserEvents(t *testing.T) {
 	}{
 		{
 			name: `
-GET /api/event #1 
+GET /api/user/events #1 
 correct inputID
 got status 200
 			`,
@@ -74,7 +74,7 @@ got status 200
 		},
 		{
 			name: `
-GET /api/event #2
+GET /api/user/events #2
 not correct inputID
 got status 400
 			`,
@@ -84,7 +84,7 @@ got status 400
 		},
 		{
 			name: `
-GET /api/event #3
+GET /api/user/events #3
 not correct return GetEvents
 got status 400
 			`,
@@ -106,8 +106,10 @@ got status 400
 			repo := mock.NewMockStorage(c)
 			test.mockBehavior(repo, context.Background(), test.inputUserID)
 
+			h := handlers.Init(repo, nil, "", 0)
+
 			handler := func(w http.ResponseWriter, r *http.Request) {
-				handlers.HandlerUserEvents(w, r, repo)
+				h.UserEvents(w, r)
 			}
 
 			req, err := http.NewRequest("GET", "/api/user/events", nil)
