@@ -74,7 +74,6 @@ func addCountUser(ctx context.Context, tx *sql.Tx, eventID int) error {
 
 func (s *storageData) AddEventUser(ctx context.Context, tick *entity.Ticket) error {
 	err := s.inTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
-
 		if err := addRecord(ctx, tx, tick.EventID, tick.UserID); err != nil {
 			return fmt.Errorf("cannot addRecord: %w", err)
 		}

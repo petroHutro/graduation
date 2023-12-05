@@ -25,10 +25,23 @@ func (h *Handler) UserAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hour, err := h.storage.GetDateEvent(r.Context(), eventID)
+	if err != nil {
+		var repErr *storage.RepError
+		if errors.As(err, &repErr) && repErr.ForeignKeyViolation {
+			logger.Error("event not exist: %v", err)
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			logger.Error("cannot get  date event: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		return
+	}
+
 	ticket := entity.Ticket{
 		UserID:  userID,
 		EventID: eventID,
-		Exp:     10,
+		Exp:     hour,
 	}
 
 	if err := h.tick.Generate(&ticket); err != nil {
@@ -39,14 +52,9 @@ func (h *Handler) UserAdd(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.storage.AddEventUser(r.Context(), &ticket); err != nil {
 		var repErr *storage.RepError
-		if errors.As(err, &repErr) {
-			if repErr.UniqueViolation {
-				logger.Error("user already add event: %v", err)
-				w.WriteHeader(http.StatusConflict)
-			} else if repErr.ForeignKeyViolation {
-				logger.Error("event not exist: %v", err)
-				w.WriteHeader(http.StatusNotFound)
-			}
+		if errors.As(err, &repErr) && repErr.UniqueViolation {
+			logger.Error("user already add event: %v", err)
+			w.WriteHeader(http.StatusConflict)
 		} else {
 			logger.Error("cannot add event user: %v", err)
 			w.WriteHeader(http.StatusBadRequest)

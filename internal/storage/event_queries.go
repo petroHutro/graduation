@@ -48,6 +48,35 @@ func (s *storageData) CreateEvent(ctx context.Context, e *entity.Event) error {
 	return nil
 }
 
+func (s *storageData) GetDateEvent(ctx context.Context, eventID int) (int, error) {
+	var eventDate time.Time
+
+	err := s.db.QueryRowContext(ctx, `
+		SELECT date FROM events WHERE id = $1
+	`, eventID).Scan(&eventDate)
+	if err != nil {
+		var flag bool
+
+		err := s.db.QueryRowContext(ctx, `
+			SELECT 1 FROM event
+			WHERE id = $1
+		`, eventID).Scan(&flag)
+		if err != nil {
+			return 0, &RepError{Err: fmt.Errorf("cannot SELECT event: %w", err), ForeignKeyViolation: true}
+		}
+
+		return 0, fmt.Errorf("cannot get date: %w", err)
+	}
+
+	now := time.Now()
+	timeRemaining := eventDate.Sub(now)
+	if timeRemaining < 0 {
+		return 0, fmt.Errorf("event close: %w", err)
+	}
+
+	return int(timeRemaining.Hours() + 0.5), nil
+}
+
 func (s *storageData) GetImages(ctx context.Context, eventID int) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT name

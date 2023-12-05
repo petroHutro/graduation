@@ -19,7 +19,8 @@ import (
 )
 
 func TestHandlerUserAdd(t *testing.T) {
-	type mockBehavior func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket)
+	type mockBehaviorOne func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket)
+	type mockBehaviorTwo func(r *mock.MockStorage, ctx context.Context, eventID int)
 
 	if err := logger.InitLogger(config.Logger{LoggerFilePath: "file.log", LoggerFileFlag: false, LoggerMultiFlag: false}); err != nil {
 		logger.Panic(err.Error())
@@ -27,19 +28,14 @@ func TestHandlerUserAdd(t *testing.T) {
 
 	tick := ticket.Init(&config.TicketKey{TicketSecretKey: "123"})
 
-	// tt := entity.Ticket{
-	// 	UserID:  0,
-	// 	EventID: 0,
-	// 	Exp:     0,
-	// }
-
 	tests := []struct {
 		name               string
 		inputID            string
 		headerID           string
 		inputEventID       int
 		inputUserID        int
-		mockBehavior       mockBehavior
+		mockBehaviorOne    mockBehaviorOne
+		mockBehaviorTwo    mockBehaviorTwo
 		expectedStatusCode int
 	}{
 		{
@@ -52,8 +48,11 @@ got status 200
 			headerID:     "1",
 			inputEventID: 1,
 			inputUserID:  1,
-			mockBehavior: func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {
+			mockBehaviorOne: func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {
 				r.EXPECT().AddEventUser(ctx, gomock.Any()).Return(nil)
+			},
+			mockBehaviorTwo: func(r *mock.MockStorage, ctx context.Context, eventID int) {
+				r.EXPECT().GetDateEvent(ctx, eventID).Return(1, nil)
 			},
 			expectedStatusCode: 200,
 		},
@@ -65,7 +64,8 @@ got status 400
 			`,
 			inputID:            ``,
 			headerID:           "1",
-			mockBehavior:       func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {},
+			mockBehaviorOne:    func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {},
+			mockBehaviorTwo:    func(r *mock.MockStorage, ctx context.Context, eventID int) {},
 			expectedStatusCode: 400,
 		},
 		{
@@ -78,23 +78,27 @@ got status 400
 			headerID:     "1",
 			inputEventID: 1,
 			inputUserID:  1,
-			mockBehavior: func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {
+			mockBehaviorOne: func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {
 				r.EXPECT().AddEventUser(ctx, gomock.Any()).Return(errors.New("err"))
+			},
+			mockBehaviorTwo: func(r *mock.MockStorage, ctx context.Context, eventID int) {
+				r.EXPECT().GetDateEvent(ctx, eventID).Return(1, nil)
 			},
 			expectedStatusCode: 400,
 		},
 		{
 			name: `
 POST /api/user/add #4
-not correct return AddEventUser (event not exist)
+not correct return GetDateEvent (event not exist)
 got status 404
 			`,
-			inputID:      `MQ==`,
-			headerID:     "1",
-			inputEventID: 1,
-			inputUserID:  1,
-			mockBehavior: func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {
-				r.EXPECT().AddEventUser(ctx, gomock.Any()).Return(&storage.RepError{Err: errors.New("err"), ForeignKeyViolation: true})
+			inputID:         `MQ==`,
+			headerID:        "1",
+			inputEventID:    1,
+			inputUserID:     1,
+			mockBehaviorOne: func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {},
+			mockBehaviorTwo: func(r *mock.MockStorage, ctx context.Context, eventID int) {
+				r.EXPECT().GetDateEvent(ctx, eventID).Return(0, &storage.RepError{Err: errors.New("err"), ForeignKeyViolation: true})
 			},
 			expectedStatusCode: 404,
 		},
@@ -108,8 +112,11 @@ got status 409
 			headerID:     "1",
 			inputEventID: 1,
 			inputUserID:  1,
-			mockBehavior: func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {
+			mockBehaviorOne: func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {
 				r.EXPECT().AddEventUser(ctx, gomock.Any()).Return(&storage.RepError{Err: errors.New("err"), UniqueViolation: true})
+			},
+			mockBehaviorTwo: func(r *mock.MockStorage, ctx context.Context, eventID int) {
+				r.EXPECT().GetDateEvent(ctx, eventID).Return(1, nil)
 			},
 			expectedStatusCode: 409,
 		},
@@ -121,7 +128,24 @@ got status 400
 			`,
 			inputID:            `MQ==`,
 			headerID:           "",
-			mockBehavior:       func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {},
+			mockBehaviorOne:    func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {},
+			mockBehaviorTwo:    func(r *mock.MockStorage, ctx context.Context, eventID int) {},
+			expectedStatusCode: 400,
+		},
+		{
+			name: `
+POST /api/user/add #7
+not correct return GetDateEvent
+got status 400
+			`,
+			inputID:         `MQ==`,
+			headerID:        "1",
+			inputEventID:    1,
+			inputUserID:     1,
+			mockBehaviorOne: func(r *mock.MockStorage, ctx context.Context, tick *entity.Ticket) {},
+			mockBehaviorTwo: func(r *mock.MockStorage, ctx context.Context, eventID int) {
+				r.EXPECT().GetDateEvent(ctx, eventID).Return(0, errors.New("err"))
+			},
 			expectedStatusCode: 400,
 		},
 	}
@@ -133,7 +157,8 @@ got status 400
 
 			repo := mock.NewMockStorage(c)
 
-			test.mockBehavior(repo, context.Background(), &entity.Ticket{})
+			test.mockBehaviorTwo(repo, context.Background(), 1)
+			test.mockBehaviorOne(repo, context.Background(), &entity.Ticket{})
 
 			h := handlers.Init(repo, tick, "", 0)
 

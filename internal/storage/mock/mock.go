@@ -189,6 +189,21 @@ func (mr *MockEventStorageMockRecorder) DellEvent(ctx, userID, eventID interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DellEvent", reflect.TypeOf((*MockEventStorage)(nil).DellEvent), ctx, userID, eventID)
 }
 
+// GetDateEvent mocks base method.
+func (m *MockEventStorage) GetDateEvent(ctx context.Context, eventID int) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDateEvent", ctx, eventID)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDateEvent indicates an expected call of GetDateEvent.
+func (mr *MockEventStorageMockRecorder) GetDateEvent(ctx, eventID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDateEvent", reflect.TypeOf((*MockEventStorage)(nil).GetDateEvent), ctx, eventID)
+}
+
 // GetEvent mocks base method.
 func (m *MockEventStorage) GetEvent(ctx context.Context, eventID int) (*entity.Event, error) {
 	m.ctrl.T.Helper()
@@ -406,6 +421,21 @@ func (m *MockStorage) EventsToday(ctx context.Context, date time.Time) error {
 func (mr *MockStorageMockRecorder) EventsToday(ctx, date interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventsToday", reflect.TypeOf((*MockStorage)(nil).EventsToday), ctx, date)
+}
+
+// GetDateEvent mocks base method.
+func (m *MockStorage) GetDateEvent(ctx context.Context, eventID int) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDateEvent", ctx, eventID)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDateEvent indicates an expected call of GetDateEvent.
+func (mr *MockStorageMockRecorder) GetDateEvent(ctx, eventID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDateEvent", reflect.TypeOf((*MockStorage)(nil).GetDateEvent), ctx, eventID)
 }
 
 // GetEvent mocks base method.

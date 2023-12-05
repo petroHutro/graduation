@@ -27,6 +27,7 @@ type EventStorage interface {
 	DellEvent(ctx context.Context, userID, eventID int) error
 	CreateEvent(ctx context.Context, e *entity.Event) error
 	CloseEvent(ctx context.Context, userID, eventID int) error
+	GetDateEvent(ctx context.Context, eventID int) (int, error)
 }
 
 type NotificationStorage interface {
